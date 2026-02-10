@@ -5,7 +5,7 @@ export const AppHeader = ({ activeTab, setActiveTab }: { activeTab: string; setA
     { id: "dashboard", label: "Dashboard" },
     { id: "playbook", label: "Playbook" },
     { id: "chat", label: "Chat Editor" },
-    { id: "staging", label: "Staging" },
+    { id: "staging", label: "Review & Publish" },
   ];
 
   return (
