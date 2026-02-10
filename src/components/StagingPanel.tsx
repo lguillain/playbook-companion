@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { stagedEdits as initialEdits, type StagedEdit } from "@/lib/mock-data";
-import { GitBranch, Check, X, Send, Bell } from "lucide-react";
+import { GitBranch, Check, X, Send, Bell, MessageSquare, Edit3 } from "lucide-react";
 
 export const StagingPanel = () => {
   const [edits, setEdits] = useState<StagedEdit[]>(initialEdits);
@@ -70,6 +70,25 @@ export const StagingPanel = () => {
                 }`}>
                   {edit.status}
                 </span>
+                {edit.source && (
+                  <div className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                    edit.source === "chat"
+                      ? "bg-primary/10 text-primary"
+                      : "bg-secondary/50 text-secondary-foreground"
+                  }`}>
+                    {edit.source === "chat" ? (
+                      <>
+                        <MessageSquare className="w-2.5 h-2.5" />
+                        <span>AI Chat</span>
+                      </>
+                    ) : (
+                      <>
+                        <Edit3 className="w-2.5 h-2.5" />
+                        <span>Manual</span>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
               {edit.status === "pending" && (
                 <div className="flex gap-1">

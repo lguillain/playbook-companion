@@ -4,7 +4,6 @@ export const AppHeader = ({ activeTab, setActiveTab }: { activeTab: string; setA
   const tabs = [
     { id: "dashboard", label: "Dashboard" },
     { id: "playbook", label: "Playbook" },
-    { id: "chat", label: "Chat Editor" },
     { id: "staging", label: "Review & Publish" },
   ];
 
