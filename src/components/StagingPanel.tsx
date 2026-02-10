@@ -83,16 +83,16 @@ export const StagingPanel = () => {
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="grid grid-cols-2 gap-3 text-xs">
               <div>
                 <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Before</span>
-                <div className="mt-1 rounded bg-destructive/5 border border-destructive/10 p-2 text-muted-foreground font-mono leading-relaxed min-h-[40px]">
+                <div className="mt-1 rounded bg-destructive/5 border border-destructive/10 p-2 text-muted-foreground leading-relaxed min-h-[40px]">
                   {edit.before || <span className="italic text-muted-foreground/50">Empty — new content</span>}
                 </div>
               </div>
               <div>
                 <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">After</span>
-                <div className="mt-1 rounded bg-success/5 border border-success/10 p-2 text-foreground font-mono leading-relaxed min-h-[40px]">
+                <div className="mt-1 rounded bg-success/5 border border-success/10 p-2 text-foreground leading-relaxed min-h-[40px]">
                   {edit.after}
                 </div>
               </div>

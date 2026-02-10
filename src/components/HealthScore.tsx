@@ -28,11 +28,11 @@ export const HealthScore = () => {
       <div className="flex items-center gap-8">
         <div className="relative w-32 h-32 flex-shrink-0">
           <svg className="w-32 h-32 -rotate-90" viewBox="0 0 120 120">
-            <circle cx="60" cy="60" r="54" fill="none" stroke="hsl(var(--muted))" strokeWidth="8" />
+            <circle cx="60" cy="60" r="54" fill="none" stroke="hsl(var(--muted))" strokeWidth="10" strokeLinecap="round" />
             <motion.circle
               cx="60" cy="60" r="54" fill="none"
               stroke="hsl(var(--primary))"
-              strokeWidth="8"
+              strokeWidth="10"
               strokeLinecap="round"
               strokeDasharray={circumference}
               initial={{ strokeDashoffset: circumference }}

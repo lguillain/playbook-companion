@@ -61,7 +61,7 @@ export const SkillsFramework = ({ onFillGap }: { onFillGap?: (skillName: string)
                     >
                       <div className="flex items-center gap-2">
                         <Icon className={`w-3.5 h-3.5 ${config.color}`} />
-                        <span className="text-sm text-foreground">{skill.name}</span>
+                        <span className="text-sm text-foreground font-medium">{skill.name}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         {skill.lastUpdated && (
