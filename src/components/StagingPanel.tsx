@@ -22,7 +22,7 @@ export const StagingPanel = () => {
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
           <GitBranch className="w-4 h-4 text-primary" />
-          <h2 className="text-lg font-semibold text-foreground">Staging</h2>
+          <h2 className="text-lg font-semibold text-foreground">Review & Publish</h2>
           {pending.length > 0 && (
             <span className="rounded-full bg-warning/15 text-warning text-[11px] font-mono font-semibold px-2 py-0.5">
               {pending.length} pending
