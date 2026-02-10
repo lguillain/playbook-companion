@@ -49,7 +49,7 @@ export const PlaybookViewer = () => {
               {current.lastUpdated}
             </div>
           </div>
-          <div className="prose prose-sm prose-invert max-w-none">
+          <div className="prose prose-sm max-w-none">
             {current.content.split("\n").map((line, i) => {
               if (line.startsWith("## ")) return <h2 key={i} className="text-base font-bold text-foreground mt-4 mb-2">{line.replace("## ", "")}</h2>;
               if (line.startsWith("### ")) return <h3 key={i} className="text-sm font-semibold text-foreground mt-3 mb-1.5">{line.replace("### ", "")}</h3>;
