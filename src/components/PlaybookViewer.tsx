@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { playbookSections, skillsFramework } from "@/lib/mock-data";
-import { FileText, Clock, ChevronRight, CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { playbookSections as initialSections, skillsFramework } from "@/lib/mock-data";
+import { FileText, Clock, ChevronRight, CheckCircle2, AlertTriangle, XCircle, Pencil, X, Save } from "lucide-react";
 import { ChatEditor } from "./ChatEditor";
 
 const statusIcon = {
@@ -16,7 +16,7 @@ function getSkillsForSection(sectionTitle: string) {
 }
 
 function getMissingSkillsForSection(sectionId: string) {
-  const section = playbookSections.find((s) => s.id === sectionId);
+  const section = initialSections.find((s) => s.id === sectionId);
   if (!section) return [];
   const allSkills = skillsFramework.flatMap((c) => c.skills);
   // Skills that point to this section but aren't in skillsCovered (i.e. the section exists but skill is still partial/missing)
@@ -25,9 +25,37 @@ function getMissingSkillsForSection(sectionId: string) {
 }
 
 export const PlaybookViewer = () => {
-  const [activeSection, setActiveSection] = useState(playbookSections[0].id);
-  const current = playbookSections.find((s) => s.id === activeSection)!;
+  const [sections, setSections] = useState(initialSections);
+  const [activeSection, setActiveSection] = useState(sections[0].id);
+  const [editing, setEditing] = useState(false);
+  const [editDraft, setEditDraft] = useState("");
+  const [savedFlash, setSavedFlash] = useState(false);
+  const current = sections.find((s) => s.id === activeSection)!;
   const sectionSkills = getSkillsForSection(current.title);
+
+  const startEditing = () => {
+    setEditDraft(current.content);
+    setEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setEditing(false);
+    setEditDraft("");
+  };
+
+  const saveEdit = () => {
+    if (editDraft === current.content) {
+      setEditing(false);
+      return;
+    }
+    setSections((prev) =>
+      prev.map((s) => (s.id === activeSection ? { ...s, content: editDraft } : s))
+    );
+    setEditing(false);
+    setEditDraft("");
+    setSavedFlash(true);
+    setTimeout(() => setSavedFlash(false), 2000);
+  };
 
   return (
     <motion.div
@@ -40,7 +68,18 @@ export const PlaybookViewer = () => {
         <div className="flex items-center gap-2">
           <FileText className="w-4 h-4 text-primary" />
           <h2 className="text-sm font-semibold text-foreground">Playbook Content</h2>
-          <span className="text-[10px] text-muted-foreground">Read-only · Use chat to make changes</span>
+          <AnimatePresence mode="wait">
+            {savedFlash ? (
+              <motion.span key="saved" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1 text-[10px] text-success font-semibold">
+                <CheckCircle2 className="w-3 h-3" />
+                Saved — staged for review
+              </motion.span>
+            ) : (
+              <motion.span key="hint" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-[10px] text-muted-foreground">
+                {editing ? "Editing · Markdown supported" : "Click edit to make changes"}
+              </motion.span>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -49,7 +88,7 @@ export const PlaybookViewer = () => {
         <div className="flex flex-1 overflow-hidden border-r border-border">
           {/* Sidebar */}
           <div className="w-56 border-r border-border overflow-y-auto py-2 flex-shrink-0">
-            {playbookSections.map((section) => {
+            {sections.map((section) => {
               const skills = getSkillsForSection(section.title);
               const coveredCount = skills.filter((s) => s.status === "covered").length;
               const totalCount = skills.length;
@@ -57,7 +96,7 @@ export const PlaybookViewer = () => {
               return (
                 <button
                   key={section.id}
-                  onClick={() => setActiveSection(section.id)}
+                  onClick={() => { setActiveSection(section.id); setEditing(false); }}
                   className={`w-full text-left px-4 py-2.5 flex items-start gap-2 text-xs transition-colors ${
                     activeSection === section.id
                       ? "bg-primary/10 text-primary border-r-2 border-primary"
@@ -87,6 +126,32 @@ export const PlaybookViewer = () => {
                   <Clock className="w-2.5 h-2.5" />
                   {current.lastUpdated}
                 </div>
+                {!editing ? (
+                  <button
+                    onClick={startEditing}
+                    className="flex items-center gap-1 rounded-lg bg-secondary px-2.5 py-1 text-[11px] font-semibold text-secondary-foreground hover:bg-secondary/80 transition-colors ml-auto"
+                  >
+                    <Pencil className="w-3 h-3" />
+                    Edit
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1.5 ml-auto">
+                    <button
+                      onClick={cancelEditing}
+                      className="flex items-center gap-1 rounded-lg bg-muted px-2.5 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-muted/80 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                      Cancel
+                    </button>
+                    <button
+                      onClick={saveEdit}
+                      className="flex items-center gap-1 rounded-lg gradient-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground transition-opacity"
+                    >
+                      <Save className="w-3 h-3" />
+                      Save
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Skills covered by this section */}
@@ -106,19 +171,28 @@ export const PlaybookViewer = () => {
               )}
             </div>
 
-            <div className="prose prose-sm max-w-none">
-              {current.content.split("\n").map((line, i) => {
-                if (line.startsWith("## ")) return <h2 key={i} className="text-base font-bold text-foreground mt-4 mb-2">{line.replace("## ", "")}</h2>;
-                if (line.startsWith("### ")) return <h3 key={i} className="text-sm font-semibold text-foreground mt-3 mb-1.5">{line.replace("### ", "")}</h3>;
-                if (line.startsWith("- ")) return <li key={i} className="text-sm text-secondary-foreground ml-4 list-disc">{line.replace("- ", "")}</li>;
-                if (line.startsWith("| ")) return <p key={i} className="text-xs font-mono text-muted-foreground">{line}</p>;
-                if (line.startsWith("**")) return <p key={i} className="text-sm font-semibold text-foreground mt-2">{line.replace(/\*\*/g, "")}</p>;
-                if (line.startsWith(">")) return <blockquote key={i} className="border-l-2 border-primary pl-3 text-sm text-muted-foreground italic my-2">{line.replace("> ", "")}</blockquote>;
-                if (line.match(/^\d+\./)) return <li key={i} className="text-sm text-secondary-foreground ml-4 list-decimal">{line.replace(/^\d+\.\s/, "")}</li>;
-                if (line.trim() === "") return <br key={i} />;
-                return <p key={i} className="text-sm text-secondary-foreground leading-relaxed">{line}</p>;
-              })}
-            </div>
+            {editing ? (
+              <textarea
+                value={editDraft}
+                onChange={(e) => setEditDraft(e.target.value)}
+                className="w-full h-[calc(100%-80px)] min-h-[300px] rounded-lg border border-border bg-muted/30 p-4 text-sm text-foreground font-mono leading-relaxed resize-none outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
+                autoFocus
+              />
+            ) : (
+              <div className="prose prose-sm max-w-none">
+                {current.content.split("\n").map((line, i) => {
+                  if (line.startsWith("## ")) return <h2 key={i} className="text-base font-bold text-foreground mt-4 mb-2">{line.replace("## ", "")}</h2>;
+                  if (line.startsWith("### ")) return <h3 key={i} className="text-sm font-semibold text-foreground mt-3 mb-1.5">{line.replace("### ", "")}</h3>;
+                  if (line.startsWith("- ")) return <li key={i} className="text-sm text-secondary-foreground ml-4 list-disc">{line.replace("- ", "")}</li>;
+                  if (line.startsWith("| ")) return <p key={i} className="text-xs font-mono text-muted-foreground">{line}</p>;
+                  if (line.startsWith("**")) return <p key={i} className="text-sm font-semibold text-foreground mt-2">{line.replace(/\*\*/g, "")}</p>;
+                  if (line.startsWith(">")) return <blockquote key={i} className="border-l-2 border-primary pl-3 text-sm text-muted-foreground italic my-2">{line.replace("> ", "")}</blockquote>;
+                  if (line.match(/^\d+\./)) return <li key={i} className="text-sm text-secondary-foreground ml-4 list-decimal">{line.replace(/^\d+\.\s/, "")}</li>;
+                  if (line.trim() === "") return <br key={i} />;
+                  return <p key={i} className="text-sm text-secondary-foreground leading-relaxed">{line}</p>;
+                })}
+              </div>
+            )}
           </div>
         </div>
 

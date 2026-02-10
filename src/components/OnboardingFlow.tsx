@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FileText, Link, Upload, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
+import { getHealthScore } from "@/lib/mock-data";
+
+const { missing, partial } = getHealthScore();
+const gapCount = missing + partial;
 
 const sources = [
   { id: "notion", name: "Notion", icon: "📝", desc: "Connect your Notion workspace" },
@@ -91,7 +95,7 @@ export const OnboardingFlow = ({ onComplete }: { onComplete: () => void }) => {
                 <CheckCircle2 className="w-7 h-7 text-primary-foreground" />
               </div>
               <h2 className="text-xl font-bold text-foreground mb-2">Playbook connected!</h2>
-              <p className="text-sm text-muted-foreground mb-6">We found 7 gaps in your skills coverage. Let's fix them.</p>
+              <p className="text-sm text-muted-foreground mb-6">We found {gapCount} gaps in your skills coverage. Let's fix them.</p>
               <button
                 onClick={onComplete}
                 className="rounded-xl gradient-primary px-6 py-3 text-sm font-semibold text-primary-foreground"
