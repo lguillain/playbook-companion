@@ -1,9 +1,18 @@
 import { motion } from "framer-motion";
-import { getHealthScore } from "@/lib/mock-data";
-import { XCircle, AlertTriangle, Clock, CheckCircle2 } from "lucide-react";
+import { useHealthScore } from "@/hooks/use-health-score";
+import { XCircle, AlertTriangle, Clock, CheckCircle2, Loader2 } from "lucide-react";
 
 export const HealthScore = ({ activeFilter, onFilterChange }: { activeFilter: string | null; onFilterChange: (filter: string) => void }) => {
-  const health = getHealthScore();
+  const { data: health, isLoading } = useHealthScore();
+
+  if (isLoading || !health) {
+    return (
+      <div className="rounded-xl border border-border bg-card px-5 py-3 shadow-card flex items-center justify-center min-h-[52px]">
+        <Loader2 className="w-4 h-4 text-primary animate-spin" />
+      </div>
+    );
+  }
+
   const healthColor = health.score >= 70 ? "text-success" : health.score >= 40 ? "text-warning" : "text-destructive";
 
   return (

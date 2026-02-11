@@ -1,129 +1,321 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Sparkles, Bot, User } from "lucide-react";
-import type { ChatMessage } from "@/lib/mock-data";
+import { Send, Sparkles, Bot, User, Mic, MicOff, GitBranch, Check, X, Loader2, Maximize2 } from "lucide-react";
+import { toast } from "sonner";
+import type { ChatMessage, StreamedEdit } from "@/lib/types";
+import { useChatStream, useChatHistory } from "@/hooks/use-chat";
+import { useApproveEdit, useRejectEdit } from "@/hooks/use-staged-edits";
+import { Markdown } from "./Markdown";
 
-const initialMessages: ChatMessage[] = [
-  {
-    id: "1",
-    role: "assistant",
-    content: "Hi! I'm your playbook assistant. Just tell me what you want to add or change — I'll figure out where it goes.\n\nYou can paste notes, describe a new technique, or ask me to fill a gap. I'll draft the content and place it in the right section for your review.",
-    timestamp: new Date().toISOString(),
-  },
-];
+// ── Inline diff card ──────────────────────────────────────────────────
 
-const mockResponses: Record<string, string> = {
-  "decision-maker": `Here's draft content for **Decision-Maker Roles & Buying Groups**:\n\n### Mapping the Buying Group\n\n**Typical Roles in a Deal:**\n- **Economic Buyer (CRO/CEO):** Has budget authority. Cares about revenue impact, forecasting, ROI.\n- **Champion (Enablement Manager):** Drives internal adoption. Needs easy rollout and quick wins.\n- **Technical Evaluator (RevOps/IT):** Validates integrations, security, data flows.\n- **End Users (Sales Reps/Managers):** Must see day-to-day value or adoption stalls.\n\n**How to Identify Each:**\n- Ask your champion: "Who has the authority to release the funds and sign the deal?"\n- "Who else needs to see this before a decision?"\n- "What happened last time you bought a tool like this?"\n\n**Common Mistakes:**\n- Assuming your champion IS the economic buyer\n- Waiting until contract stage to discover approval layers\n- Not validating power with your champion directly\n\n**Exit Criteria:** You've mapped all stakeholders and met or scheduled the economic buyer.\n\nShall I stage this for review?`,
-
-  "pitch scripts": `Here's draft content for **Pitch Scripts**:\n\n### Company-Specific Pitch Scripts\n\n**30-Second Elevator Pitch:**\n"We help sales teams turn every customer interaction into a coaching moment. Instead of relying on managers to review calls, our AI coaches reps in real-time through Slack and Teams—so they improve after every conversation, not just quarterly reviews."\n\n**Cold Call Opener (CRO/Head of Sales):**\n"Hi [Name], I'm calling because most sales leaders I speak with say their reps only retain 10% of training content. We've helped companies like [Reference] cut ramp time by 30% using real-time coaching embedded in their daily workflow. Is that something worth a 15-minute conversation?"\n\n**Cold Call Opener (Enablement):**\n"Hi [Name], I'm reaching out because enablement teams often tell me the biggest challenge isn't creating content—it's getting reps to actually use it. We've built a way to deliver coaching proactively in Slack/Teams so reps learn by doing. Worth a quick chat?"\n\n**Discovery Bridge:**\nAfter any cold call agreement: "Great—before we meet, can I ask: what's the biggest skills gap you're trying to close this quarter?"\n\nReady to add this to Value Proposition & Messaging?`,
-
-  "risk detection": `Here's draft content for **Risk Detection Guidance**:\n\n### Spotting Deal Risk Early\n\n**Red Flags (High Risk):**\n- No access to economic buyer after Stage 2\n- Champion goes silent for >7 days\n- "We need to check with legal" without a timeline\n- Competitor mentioned late in process\n- No compelling event or hard deadline\n\n**Amber Flags (Monitor Closely):**\n- Single-threaded (only one contact)\n- Budget not yet allocated\n- Stakeholder changes mid-cycle\n- "We love it but timing isn't right"\n\n**Green Flags (On Track):**\n- Multi-threaded with 3+ stakeholders\n- Economic buyer engaged\n- Mutual action plan agreed\n- Clear timeline tied to business initiative\n\n**What To Do:**\n- Red: Escalate in deal review. Create recovery plan or disqualify.\n- Amber: Address in next meeting. Ask direct questions.\n- Green: Maintain momentum. Don't slow down.\n\nShall I stage this for review?`,
-
-  "stakeholder mapping": `Here's draft content for **Stakeholder Mapping Questions**:\n\n### Discovery Questions for Stakeholder Mapping\n\n**Identifying the Buying Group:**\n- "Besides yourself, who else would be involved in evaluating this?"\n- "Who would need to sign off before moving forward?"\n- "Is there someone in IT/Security who'd need to review?"\n- "Who used to own this initiative before you?"\n\n**Understanding Influence:**\n- "If you recommend this, what happens next?"\n- "Has anyone in the organization pushed back on similar purchases?"\n- "Who would benefit most from this—and who might resist?"\n\n**Mapping the Process:**\n- "Walk me through how your last software purchase happened."\n- "What's the typical approval chain for a tool at this price point?"\n- "Are there any committees or review boards involved?"\n\n**Pro Tip:** Build a stakeholder map after every discovery call. Update it after every meeting. Share it with your champion to validate.\n\nReady to add this to the playbook?`,
-
-  "solution fit": `Here's draft content for **Solution Fit Assessment**:\n\n### Evaluating Solution Fit\n\n**Strong Fit Indicators:**\n- B2B sales team with 10-100 reps\n- Already using call recording (Gong, Chorus, etc.)\n- Sales leadership wants to scale coaching\n- Current training is event-based, not continuous\n- Using Slack or Teams for internal communication\n\n**Weak Fit / Disqualify:**\n- Service-based sales (not product sales)\n- No call recording infrastructure\n- Team <5 reps (ROI hard to justify)\n- Looking for a content management system, not coaching\n\n**How to Assess During Demo:**\n1. After showing each feature, ask: "Does this match how your team works today?"\n2. Score each use case 0-10 with the prospect\n3. If average <6, have an honest conversation about fit\n4. Document fit assessment in CRM opportunity notes\n\n**Honest Conversation Template:**\n"Based on what I've heard, I want to be transparent—our solution is strongest when [X, Y, Z]. It sounds like your priority is [A]. Let me think about whether we're the best fit and get back to you."\n\nShall I stage this?`,
-
-  "handover processes": `Here's draft content for **Handover Processes**:\n\n### Sales Handover Standards\n\n**SDR → AE Handoff:**\n- Required: Company name, ICP fit score, persona, pain points identified, recording link\n- Meeting: 5-min sync before first call or async Slack summary\n- AE must review call recording before discovery\n\n**AE → CS Handoff:**\n- Required within 24 hours of close:\n  - Business case and success plan\n  - Timeline and hard deadlines\n  - Stakeholder map with champions\n  - Integration requirements\n  - Risks and mitigation strategies\n  - Expected outcomes and metrics\n- Introduce CSM to champion via email\n- Schedule kickoff within 1 week\n\n**AE → AE (Territory Transfer):**\n- Pipeline review meeting\n- All deal context transferred in CRM\n- Warm intro to active prospects\n\n**Meeting Notes Standard:**\nEvery external meeting must have notes in CRM within 4 hours. Include: attendees, key takeaways, commitments made, next steps with dates.\n\nReady to add this to the playbook?`,
+type DiffCardProps = {
+  edit: StreamedEdit;
+  onAccept: (editId: string) => void;
+  onReject: (editId: string) => void;
+  status: "pending" | "accepted" | "rejected";
+  isProcessing: boolean;
 };
 
-type FillRequest = { skill: string; key: number };
+const DiffCard = ({ edit, onAccept, onReject, status, isProcessing }: DiffCardProps) => {
+  const isResolved = status !== "pending";
+  const [open, setOpen] = useState(false);
+
+  const diffContent = (fullSize: boolean) => (
+    <div className={fullSize ? "grid grid-cols-2 gap-4 text-sm" : "grid grid-cols-2 gap-2 text-[11px]"}>
+      <div>
+        <span className={`${fullSize ? "text-xs" : "text-[9px]"} font-semibold text-muted-foreground uppercase tracking-wider`}>
+          Before
+        </span>
+        <div className={`mt-1 rounded bg-destructive/5 border border-destructive/10 ${fullSize ? "p-3" : "p-1.5"} text-muted-foreground leading-relaxed ${fullSize ? "max-h-[60vh] overflow-y-auto" : "max-h-[150px] overflow-y-auto"}`}>
+          {edit.before || (
+            <span className="italic text-muted-foreground/50">Empty — new content</span>
+          )}
+        </div>
+      </div>
+      <div>
+        <span className={`${fullSize ? "text-xs" : "text-[9px]"} font-semibold text-muted-foreground uppercase tracking-wider`}>
+          After
+        </span>
+        <div className={`mt-1 rounded bg-success/5 border border-success/10 ${fullSize ? "p-3" : "p-1.5"} text-foreground leading-relaxed ${fullSize ? "max-h-[60vh] overflow-y-auto" : "max-h-[150px] overflow-y-auto"}`}>
+          {edit.after}
+        </div>
+      </div>
+    </div>
+  );
+
+  const actionButtons = (fullSize: boolean) =>
+    !isResolved ? (
+      <div className={`flex gap-2 ${fullSize ? "pt-2" : "pt-1"}`}>
+        <button
+          onClick={() => { onAccept(edit.id); setOpen(false); }}
+          disabled={isProcessing}
+          className={`flex-1 flex items-center justify-center gap-1 rounded-md bg-success/15 hover:bg-success/25 px-2 ${fullSize ? "py-2 text-sm" : "py-1.5 text-[11px]"} font-semibold text-success transition-colors disabled:opacity-30`}
+        >
+          {isProcessing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+          Accept
+        </button>
+        <button
+          onClick={() => { onReject(edit.id); setOpen(false); }}
+          disabled={isProcessing}
+          className={`flex-1 flex items-center justify-center gap-1 rounded-md bg-destructive/15 hover:bg-destructive/25 px-2 ${fullSize ? "py-2 text-sm" : "py-1.5 text-[11px]"} font-semibold text-destructive transition-colors disabled:opacity-30`}
+        >
+          {isProcessing ? <Loader2 className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />}
+          Reject
+        </button>
+      </div>
+    ) : null;
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.97 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className={`rounded-lg border p-3 space-y-2 ${
+          isResolved
+            ? status === "accepted"
+              ? "border-success/30 bg-success/5"
+              : "border-destructive/30 bg-destructive/5 opacity-60"
+            : "border-primary/30 bg-primary/5"
+        }`}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <GitBranch className="w-3 h-3 text-primary" />
+            <span className="text-[11px] font-semibold text-foreground">{edit.sectionTitle}</span>
+            {isResolved && (
+              <span className={`rounded px-1.5 py-0.5 text-[9px] font-mono font-semibold ${
+                status === "accepted"
+                  ? "bg-success/15 text-success"
+                  : "bg-destructive/15 text-destructive"
+              }`}>
+                {status}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={() => setOpen(true)}
+            className="flex items-center gap-1 text-[9px] font-semibold text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Maximize2 className="w-3 h-3" />
+            Expand
+          </button>
+        </div>
+
+        {edit.rationale && (
+          <p className="text-[11px] text-muted-foreground italic leading-snug">
+            {edit.rationale}
+          </p>
+        )}
+
+        {diffContent(false)}
+        {actionButtons(false)}
+      </motion.div>
+
+      {open && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-8" onClick={() => setOpen(false)}>
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-4xl rounded-xl border border-border bg-card shadow-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <GitBranch className="w-4 h-4 text-primary" />
+                <span className="text-sm font-semibold text-foreground">{edit.sectionTitle}</span>
+                {isResolved && (
+                  <span className={`rounded px-1.5 py-0.5 text-[10px] font-mono font-semibold ${
+                    status === "accepted"
+                      ? "bg-success/15 text-success"
+                      : "bg-destructive/15 text-destructive"
+                  }`}>
+                    {status}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => setOpen(false)}
+                className="rounded-md p-1 hover:bg-muted transition-colors"
+              >
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </div>
+
+            {edit.rationale && (
+              <p className="text-sm text-muted-foreground italic leading-snug">
+                {edit.rationale}
+              </p>
+            )}
+
+            {diffContent(true)}
+            {actionButtons(true)}
+          </motion.div>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+};
+
+// ── Main component ────────────────────────────────────────────────────
 
 type ChatEditorProps = {
-  prefillGap?: FillRequest;
   currentSection?: string;
   sectionId?: string;
   isEmbedded?: boolean;
 };
 
-export const ChatEditor = ({ prefillGap, currentSection, sectionId, isEmbedded = false }: ChatEditorProps) => {
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false }: ChatEditorProps) => {
+  const conversationId = useMemo(
+    () => sectionId ? `section-${sectionId}` : "dashboard",
+    [sectionId]
+  );
+
+  const { data: history } = useChatHistory(conversationId);
+  const { sendMessage: streamMessage, isStreaming, streamingContent, stagedEdits, isToolRunning } = useChatStream();
+  const approveEdit = useApproveEdit();
+  const rejectEdit = useRejectEdit();
+
+  const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
+  const [editStatuses, setEditStatuses] = useState<Record<string, "accepted" | "rejected">>({});
+  const [processingEditId, setProcessingEditId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
-    if (prefillGap) {
-      const text = `Help me write content for: ${prefillGap.skill}`;
-      sendMessage(text);
-    }
-  }, [prefillGap?.key]);
+  // Voice-to-text via Web Speech API
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const speechSupported = typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
 
-  // Update initial message when section changes (embedded mode)
-  useEffect(() => {
-    if (isEmbedded && currentSection) {
-      setMessages([
-        {
-          id: "1",
-          role: "assistant",
-          content: `You're viewing: **${currentSection}**\n\nJust tell me what you want to add or change — I'll figure out where it belongs in the playbook. It doesn't have to be about this section.\n\nI can also help with gaps, questions, or drafting new content.`,
-          timestamp: new Date().toISOString(),
-        },
-      ]);
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      return;
     }
-  }, [currentSection, sectionId, isEmbedded]);
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    // Capture whatever is already in the input as the frozen base
+    const baseText = input.trim() ? input.trimEnd() + " " : "";
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let full = "";
+      for (let i = 0; i < event.results.length; i++) {
+        full += event.results[i][0].transcript;
+      }
+      setInput(baseText + full);
+    };
+
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
+  };
+
+  // Build display messages: history from DB + local optimistic messages
+  const messages = useMemo(() => {
+    const initialMsg: ChatMessage = {
+      id: "initial",
+      role: "assistant",
+      content: isEmbedded && currentSection
+        ? `You're viewing: **${currentSection}**\n\nJust tell me what you want to add or change — I'll figure out where it belongs in the playbook. It doesn't have to be about this section.\n\nI can also help with gaps, questions, or drafting new content.`
+        : "Hi! I'm your playbook assistant. Just tell me what you want to add or change — I'll figure out where it goes.\n\nYou can paste notes, describe a new technique, or ask me to fill a gap. I'll draft the content and place it in the right section for your review.",
+      timestamp: new Date().toISOString(),
+    };
+
+    const dbMessages = history ?? [];
+    return [initialMsg, ...dbMessages, ...localMessages];
+  }, [history, localMessages, isEmbedded, currentSection]);
+
+  // Reset local messages when conversation changes
+  useEffect(() => {
+    setLocalMessages([]);
+    setEditStatuses({});
+  }, [conversationId]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages]);
+  }, [messages, streamingContent, stagedEdits]);
 
-  const sendMessage = (text: string) => {
-    if (!text.trim()) return;
+  const handleAccept = async (editId: string) => {
+    setProcessingEditId(editId);
+    try {
+      await approveEdit.mutateAsync(editId);
+      setEditStatuses((prev) => ({ ...prev, [editId]: "accepted" }));
+      toast.success("Edit approved and applied!");
+    } catch {
+      toast.error("Failed to approve edit");
+    } finally {
+      setProcessingEditId(null);
+    }
+  };
+
+  const handleReject = async (editId: string) => {
+    setProcessingEditId(editId);
+    try {
+      await rejectEdit.mutateAsync(editId);
+      setEditStatuses((prev) => ({ ...prev, [editId]: "rejected" }));
+      toast.success("Edit rejected");
+    } catch {
+      toast.error("Failed to reject edit");
+    } finally {
+      setProcessingEditId(null);
+    }
+  };
+
+  const handleSendText = async (text: string) => {
+    if (!text.trim() || isStreaming) return;
 
     const userMsg: ChatMessage = {
-      id: Date.now().toString(),
+      id: `local-${Date.now()}`,
       role: "user",
       content: text,
       timestamp: new Date().toISOString(),
     };
-    setMessages((prev) => [...prev, userMsg]);
+    setLocalMessages((prev) => [...prev, userMsg]);
     setInput("");
-    setIsTyping(true);
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
 
-    const matchKey = Object.keys(mockResponses).find((k) => text.toLowerCase().includes(k));
+    try {
+      const result = await streamMessage(text, {
+        conversationId,
+        sectionContext: sectionId
+          ? { sectionId, sectionTitle: currentSection ?? "" }
+          : undefined,
+      });
 
-    setTimeout(() => {
-      let content: string;
-
-      if (matchKey) {
-        content = mockResponses[matchKey];
+      // Persist edits as a local assistant message so they stay visible after stream ends
+      if (result.edits.length > 0) {
+        setLocalMessages((prev) => [
+          ...prev,
+          {
+            id: `edits-${Date.now()}`,
+            role: "assistant",
+            content: "",
+            timestamp: new Date().toISOString(),
+            edits: result.edits,
+          },
+        ]);
       } else {
-        // Provide contextual fallback responses based on keywords
-        const lowerInput = text.toLowerCase();
-
-        if (lowerInput.includes("objection") || lowerInput.includes("handle") || lowerInput.includes("pricing")) {
-          content = `I can help with objection & pricing handling. I see we're missing content for:\n\n• **Top Rep Response Examples** — real examples from your best reps\n\nWe also have partial coverage on persona-specific objection patterns I could expand. Which would be most helpful right now?\n\nOr tell me about a specific objection your reps are facing, and I'll draft a response framework.`;
-        } else if (lowerInput.includes("demo") || lowerInput.includes("presentation") || lowerInput.includes("solution fit")) {
-          content = `For demo & solution fit, I can help with:\n\n• **Solution Fit Assessment** (currently missing)\n• **Persona-Based Demo Adaptation** (currently missing)\n• Expanding customer-specific demo examples\n• Improving the demo storyline and sequence\n\nWhat aspect of demos would you like to focus on?`;
-        } else if (lowerInput.includes("qualification") || lowerInput.includes("meddicc") || lowerInput.includes("risk")) {
-          content = `Our qualification section covers MEDDICC and 5Ps frameworks. I can help with:\n\n• **Risk Detection Guidance** (currently missing)\n• **Deal Health Flags** — red/amber/green indicators (currently missing)\n• Expanding ICP fit in qualification\n• Adding company-specific discovery questions\n\nWhich qualification skill should we prioritize?`;
-        } else if (lowerInput.includes("discovery") || lowerInput.includes("question")) {
-          content = `For discovery & customer-centric questioning, I see gaps in:\n\n• **Stakeholder Mapping Questions** (missing)\n• **Discovery-to-Value Connection** (missing)\n• Company-specific discovery questions (partial)\n\nI can draft targeted question frameworks tied to your ICP and personas. Where should we start?`;
-        } else if (lowerInput.includes("process") || lowerInput.includes("meeting")) {
-          content = `For sales process & meeting sequences, I can help with:\n\n• **Process Best Practices & Examples** (currently missing)\n• Expanding meeting sequences\n• Adding real examples of what "good" looks like at each stage\n\nWant me to start with best practices or meeting flow?`;
-        } else if (lowerInput.includes("vocab") || lowerInput.includes("language") || lowerInput.includes("terminol")) {
-          content = `For sales vocabulary & buyer language, I see a gap in:\n\n• **Terms to Avoid & Correct Usage** (missing)\n\nI can also expand buyer-facing terminology to ensure your team speaks the customer's language. Want me to draft a glossary or a "do's and don'ts" list?`;
-        } else if (lowerInput.includes("tool") || lowerInput.includes("crm") || lowerInput.includes("handover") || lowerInput.includes("handoff")) {
-          content = `For tools, tech stack & usage, I can help with:\n\n• **Handover Processes** — SDR→AE, AE→CS, territory transfers (missing)\n• Expanding sales engagement tool guidelines\n• Updating CRM usage rules\n\nWhat's most critical for your team right now?`;
-        } else if (lowerInput.includes("deal") || lowerInput.includes("opportunity") || lowerInput.includes("alignment")) {
-          content = `For opportunity management & deal control, I see gaps in:\n\n• **Internal Alignment Playbook** (missing)\n• Expanding next-step control techniques\n\nI can also strengthen the mutual commitment checklists. What would help your reps most?`;
-        } else {
-          // Generic but helpful fallback
-          content = `I can help with that! Based on your playbook, I suggest:\n\n**Current gaps I see:**\n• Decision-Maker Roles & Buying Groups\n• Risk Detection Guidance\n• Stakeholder Mapping Questions\n• Solution Fit Assessment\n• Handover Processes\n\n**Or I can:**\n• Expand existing sections with more examples\n• Update outdated content\n• Answer questions about what's already documented\n\nWhat would be most valuable for your team right now?`;
-        }
+        // No edits — history query will refetch, clear locals
+        setLocalMessages([]);
       }
-
-      const assistantMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content,
-        timestamp: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, assistantMsg]);
-      setIsTyping(false);
-    }, 1500);
+    } catch {
+      // On error, keep local messages visible so user sees what they sent
+    }
   };
 
-  const handleSend = () => sendMessage(input);
+  const handleSend = () => handleSendText(input);
 
   return (
     <motion.div
@@ -151,19 +343,103 @@ export const ChatEditor = ({ prefillGap, currentSection, sectionId, isEmbedded =
               animate={{ opacity: 1, y: 0 }}
               className={`flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
             >
+              {/* Avatar */}
               <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${msg.role === "assistant" ? "bg-primary/10 text-primary" : "bg-secondary text-secondary-foreground"}`}>
                 {msg.role === "assistant" ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
               </div>
-              <div className={`max-w-[80%] rounded-xl px-4 py-3 text-sm leading-relaxed ${msg.role === "assistant" ? "bg-muted text-foreground" : "bg-primary text-primary-foreground"}`}>
-                <div className="whitespace-pre-wrap">{msg.content}</div>
+
+              <div className="max-w-[80%] space-y-2">
+                {/* Text content */}
+                {msg.content && (
+                  <div className={`rounded-xl px-4 py-3 text-sm leading-relaxed ${msg.role === "assistant" ? "bg-muted text-foreground" : "bg-primary text-primary-foreground"}`}>
+                    {msg.role === "assistant" ? (
+                      <Markdown>{msg.content}</Markdown>
+                    ) : (
+                      <div className="whitespace-pre-wrap">{msg.content}</div>
+                    )}
+                  </div>
+                )}
+
+                {/* Inline diff cards for this message */}
+                {msg.edits?.map((edit) => (
+                  <DiffCard
+                    key={edit.id}
+                    edit={edit}
+                    onAccept={handleAccept}
+                    onReject={handleReject}
+                    status={editStatuses[edit.id] ?? "pending"}
+                    isProcessing={processingEditId === edit.id}
+                  />
+                ))}
               </div>
             </motion.div>
           ))}
         </AnimatePresence>
 
-        {isTyping && (
+        {/* Streaming text */}
+        {isStreaming && streamingContent && (
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex gap-3">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Bot className="w-4 h-4 text-primary" />
+            </div>
+            <div className="max-w-[80%] space-y-2">
+              <div className="rounded-xl px-4 py-3 text-sm leading-relaxed bg-muted text-foreground">
+                <Markdown>{streamingContent}</Markdown>
+              </div>
+
+              {/* Diff cards that arrived during streaming */}
+              {stagedEdits.map((edit) => (
+                <DiffCard
+                  key={edit.id}
+                  edit={edit}
+                  onAccept={handleAccept}
+                  onReject={handleReject}
+                  status={editStatuses[edit.id] ?? "pending"}
+                  isProcessing={processingEditId === edit.id}
+                />
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Diff cards without preceding text (tool-only response) */}
+        {isStreaming && !streamingContent && stagedEdits.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex gap-3">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Bot className="w-4 h-4 text-primary" />
+            </div>
+            <div className="max-w-[80%] space-y-2">
+              {stagedEdits.map((edit) => (
+                <DiffCard
+                  key={edit.id}
+                  edit={edit}
+                  onAccept={handleAccept}
+                  onReject={handleReject}
+                  status={editStatuses[edit.id] ?? "pending"}
+                  isProcessing={processingEditId === edit.id}
+                />
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Tool running indicator */}
+        {isStreaming && isToolRunning && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
-            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Bot className="w-4 h-4 text-primary" />
+            </div>
+            <div className="bg-muted rounded-xl px-4 py-3 flex items-center gap-2">
+              <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
+              <span className="text-xs text-muted-foreground">Staging edit...</span>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Loading dots */}
+        {isStreaming && !streamingContent && !isToolRunning && stagedEdits.length === 0 && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
               <Bot className="w-4 h-4 text-primary" />
             </div>
             <div className="bg-muted rounded-xl px-4 py-3">
@@ -183,18 +459,39 @@ export const ChatEditor = ({ prefillGap, currentSection, sectionId, isEmbedded =
       </div>
 
       <div className="px-4 py-3 border-t border-border">
-        <div className="flex items-center gap-2 bg-muted rounded-xl px-4 py-2">
-          <input
-            type="text"
+        <div className="flex items-end gap-2 bg-muted rounded-xl px-4 py-2">
+          <textarea
+            ref={textareaRef}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            onChange={(e) => {
+              setInput(e.target.value);
+              e.target.style.height = "auto";
+              e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
             placeholder="Ask me to draft content, fill gaps, or edit sections..."
-            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none resize-none leading-relaxed py-1"
+            rows={1}
+            disabled={isStreaming}
           />
+          {speechSupported && (
+            <button
+              onClick={toggleListening}
+              disabled={isStreaming}
+              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all disabled:opacity-30 ${isListening ? "bg-red-500/15 text-red-500 animate-pulse" : "text-muted-foreground hover:text-foreground"}`}
+              title={isListening ? "Stop listening" : "Voice input"}
+            >
+              {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            </button>
+          )}
           <button
             onClick={handleSend}
-            disabled={!input.trim()}
+            disabled={!input.trim() || isStreaming}
             className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center disabled:opacity-30 transition-opacity"
           >
             <Send className="w-4 h-4 text-primary-foreground" />
