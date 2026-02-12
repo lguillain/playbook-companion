@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { BookOpen, Loader2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 
 export default function Login() {
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const location = useLocation();
+  const mode = location.pathname === "/signup" ? "signup" : "login";
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -62,7 +63,7 @@ export default function Login() {
                   type="email"
                   id="login-email"
                   name="email"
-                  autoComplete="username"
+                  autoComplete="email"
                   required
                   className="w-full rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
                   placeholder="you@company.com"
@@ -143,12 +144,13 @@ export default function Login() {
           )}
 
           <div className="mt-4 text-center">
-            <button
-              onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(null); }}
+            <Link
+              to={mode === "login" ? "/signup" : "/login"}
+              onClick={() => setError(null)}
               className="text-xs text-primary hover:underline"
             >
               {mode === "login" ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
-            </button>
+            </Link>
           </div>
         </div>
       </div>

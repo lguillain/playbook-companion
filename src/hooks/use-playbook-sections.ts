@@ -38,16 +38,17 @@ export function useResetPlaybook() {
   return useMutation({
     mutationFn: async () => {
       // Order matters: delete junctions first due to foreign keys
-      await supabase.from("section_skills").delete().neq("section_id", "");
+      // RLS scopes all deletes to the current user automatically
+      await supabase.from("section_skills").delete().neq("skill_id", "");
       await supabase.from("staged_edits").delete().neq("id", "00000000-0000-0000-0000-000000000000");
       await supabase.from("chat_messages").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("playbook_sections").delete().neq("id", "");
+      await supabase.from("playbook_sections").delete().neq("id", "00000000-0000-0000-0000-000000000000");
       await supabase.from("imports").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      // Reset all skills to missing
+      // Reset all user_skills to missing (RLS scopes to current user)
       await supabase
-        .from("skills")
+        .from("user_skills")
         .update({ status: "missing", last_updated: null, section_title: null })
-        .neq("id", "");
+        .neq("skill_id", "");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["playbook-sections"] });

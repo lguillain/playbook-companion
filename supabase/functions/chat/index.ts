@@ -117,11 +117,12 @@ async function executeTool(
     const afterText =
       toolUse.name === "edit_section" ? input.after_text : input.content;
 
-    // Verify section exists
+    // Verify section exists and belongs to user
     const { data: section } = await adminClient
       .from("playbook_sections")
       .select("id, title")
       .eq("id", sectionId)
+      .eq("user_id", userId)
       .single();
 
     if (!section) {
@@ -160,16 +161,14 @@ async function executeTool(
 
   if (toolUse.name === "create_section") {
     const { title, content, rationale } = input;
-    const sectionId = title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "");
 
-    // Check for duplicate
+    // Check for duplicate by title for this user
     const { data: existing } = await adminClient
       .from("playbook_sections")
       .select("id")
-      .eq("id", sectionId)
+      .eq("user_id", userId)
+      .ilike("title", title)
+      .limit(1)
       .single();
 
     if (existing) {
@@ -183,19 +182,24 @@ async function executeTool(
     const { data: sections } = await adminClient
       .from("playbook_sections")
       .select("sort_order")
+      .eq("user_id", userId)
       .order("sort_order", { ascending: false })
       .limit(1);
 
     const nextOrder = ((sections?.[0] as { sort_order: number } | undefined)?.sort_order ?? 0) + 1;
 
-    // Create the section
-    const { error: secError } = await adminClient
+    // Create the section (UUID auto-generated)
+    const { data: newSection, error: secError } = await adminClient
       .from("playbook_sections")
-      .insert({ id: sectionId, title, content: "", sort_order: nextOrder });
+      .insert({ user_id: userId, title, content: "", sort_order: nextOrder })
+      .select("id")
+      .single();
 
-    if (secError) {
-      return { ok: false, error: secError.message };
+    if (secError || !newSection) {
+      return { ok: false, error: secError?.message ?? "Failed to create section" };
     }
+
+    const sectionId = newSection.id;
 
     // Create staged edit to populate it
     const { data: edit, error: editError } = await supabase
@@ -282,6 +286,7 @@ Deno.serve(async (req) => {
     const { data: allSections } = await adminClient
       .from("playbook_sections")
       .select("id, title, content")
+      .eq("user_id", user.id)
       .order("sort_order");
 
     let playbookContext = "";

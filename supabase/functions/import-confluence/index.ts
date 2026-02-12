@@ -4,12 +4,52 @@ import { env } from "../_shared/env.ts";
 import { getSkillsPromptBlock, ALL_SKILL_IDS } from "../_shared/skills.ts";
 
 const ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY");
+const CONFLUENCE_CLIENT_ID = env("CONFLUENCE_CLIENT_ID");
+const CONFLUENCE_CLIENT_SECRET = env("CONFLUENCE_CLIENT_SECRET");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
+
+// ── Token refresh ───────────────────────────────────────────────────
+
+/** Refresh the Confluence access token using the stored refresh token. */
+async function refreshAccessToken(
+  refreshToken: string,
+  connectionId: string,
+  adminClient: ReturnType<typeof createClient>
+): Promise<string> {
+  const res = await fetch("https://auth.atlassian.com/oauth/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      grant_type: "refresh_token",
+      client_id: CONFLUENCE_CLIENT_ID,
+      client_secret: CONFLUENCE_CLIENT_SECRET,
+      refresh_token: refreshToken,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Token refresh failed (${res.status}): ${err}`);
+  }
+
+  const data = await res.json();
+
+  // Persist new tokens
+  await adminClient
+    .from("connections")
+    .update({
+      access_token: data.access_token,
+      ...(data.refresh_token ? { refresh_token: data.refresh_token } : {}),
+    })
+    .eq("id", connectionId);
+
+  return data.access_token;
+}
 
 // ── Confluence helpers ──────────────────────────────────────────────
 
@@ -281,6 +321,7 @@ Deno.serve(async (req) => {
       .from("connections")
       .select("*")
       .eq("provider", "confluence")
+      .eq("connected_by", user.id)
       .order("created_at", { ascending: false })
       .limit(1)
       .single();
@@ -292,7 +333,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    const confluenceToken = connection.access_token;
     const cloudId = connection.workspace_id;
 
     if (!cloudId) {
@@ -300,6 +340,20 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: "No Confluence cloud ID found. Please reconnect Confluence." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Refresh the access token before making API calls
+    let confluenceToken = connection.access_token;
+    if (connection.refresh_token) {
+      try {
+        confluenceToken = await refreshAccessToken(
+          connection.refresh_token,
+          connection.id,
+          adminClient
+        );
+      } catch (err) {
+        console.error("Token refresh failed, trying existing token:", err);
+      }
     }
 
     // Parse optional pageIds from request body
@@ -320,6 +374,7 @@ Deno.serve(async (req) => {
         .select("metadata")
         .eq("provider", "confluence")
         .eq("status", "completed")
+        .eq("started_by", user.id)
         .order("completed_at", { ascending: false })
         .limit(1)
         .single();
@@ -367,16 +422,13 @@ Deno.serve(async (req) => {
     type ParsedPage = { title: string; markdown: string; depth: number; lastModified: string | null };
     const parsedPages: ParsedPage[] = [];
     for (const page of orderedPages) {
-      if (!page.html.trim()) continue;
-      const markdown = htmlToMarkdown(page.html);
-      if (markdown) {
-        parsedPages.push({
-          title: page.title,
-          markdown,
-          depth: page.depth,
-          lastModified: page.lastModified,
-        });
-      }
+      const markdown = page.html.trim() ? htmlToMarkdown(page.html) : "";
+      parsedPages.push({
+        title: page.title,
+        markdown,
+        depth: page.depth,
+        lastModified: page.lastModified,
+      });
     }
 
     if (parsedPages.length === 0) {
@@ -484,47 +536,54 @@ Return this JSON structure:
       pageSkillMap.set(ps.pageIndex, (ps.skillIds ?? []).filter((id) => ALL_SKILL_IDS.has(id)));
     }
 
-    // Clear existing data before inserting
-    await adminClient.from("section_skills").delete().neq("section_id", "");
-    await adminClient.from("staged_edits").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await adminClient.from("chat_messages").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await adminClient.from("playbook_sections").delete().neq("id", "");
+    // Clear existing data for THIS USER
+    await adminClient.from("section_skills").delete().eq("user_id", user.id);
+    await adminClient.from("staged_edits").delete().eq("created_by", user.id);
+    await adminClient.from("chat_messages").delete().eq("created_by", user.id);
+    await adminClient.from("playbook_sections").delete().eq("user_id", user.id);
 
-    // Reset all skills to "missing"
+    // Reset all user_skills to "missing" for this user
     await adminClient
-      .from("skills")
+      .from("user_skills")
       .update({ status: "missing", last_updated: null, section_title: null })
-      .neq("id", "");
+      .eq("user_id", user.id);
 
     const fallbackDate = new Date().toISOString().split("T")[0];
 
     // Insert each page as a section, preserving tree order
     for (let i = 0; i < parsedPages.length; i++) {
       const page = parsedPages[i];
-      const sectionId = `confluence-${i + 1}`;
 
       // Indent subpage titles to show hierarchy
       const titlePrefix = page.depth > 0 ? "\u00A0\u00A0".repeat(page.depth) : "";
       const displayTitle = `${titlePrefix}${page.title}`;
 
-      await adminClient.from("playbook_sections").upsert({
-        id: sectionId,
-        title: displayTitle,
-        content: page.markdown,
-        sort_order: i + 1,
-        last_updated: page.lastModified ?? fallbackDate,
-      });
+      const { data: insertedSection } = await adminClient
+        .from("playbook_sections")
+        .insert({
+          user_id: user.id,
+          title: displayTitle,
+          content: page.markdown,
+          sort_order: i + 1,
+          last_updated: page.lastModified ?? fallbackDate,
+        })
+        .select("id")
+        .single();
+
+      if (!insertedSection) continue;
+      const sectionId = insertedSection.id;
 
       const skillIds = pageSkillMap.get(i) ?? [];
       for (const skillId of skillIds) {
         await adminClient
           .from("section_skills")
-          .upsert({ section_id: sectionId, skill_id: skillId });
+          .insert({ section_id: sectionId, skill_id: skillId, user_id: user.id });
 
         await adminClient
-          .from("skills")
+          .from("user_skills")
           .update({ section_title: displayTitle })
-          .eq("id", skillId);
+          .eq("user_id", user.id)
+          .eq("skill_id", skillId);
       }
     }
 
@@ -547,12 +606,13 @@ Return this JSON structure:
 
         const skillDate = skillDateMap.get(assessment.id) ?? fallbackDate;
         await adminClient
-          .from("skills")
+          .from("user_skills")
           .update({
             status,
             last_updated: status !== "missing" ? skillDate : null,
           })
-          .eq("id", assessment.id);
+          .eq("user_id", user.id)
+          .eq("skill_id", assessment.id);
       }
     }
 

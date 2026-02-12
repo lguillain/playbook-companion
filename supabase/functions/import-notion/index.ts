@@ -193,6 +193,7 @@ Deno.serve(async (req) => {
       .from("connections")
       .select("*")
       .eq("provider", "notion")
+      .eq("connected_by", user.id)
       .order("created_at", { ascending: false })
       .limit(1)
       .single();
@@ -336,18 +337,24 @@ Return valid JSON with this structure:
       ? sourceDates.sort().pop()!
       : new Date().toISOString().split("T")[0];
 
-    // Clear existing seed data before inserting real data
-    await adminClient.from("section_skills").delete().neq("section_id", "");
-    await adminClient.from("staged_edits").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await adminClient.from("playbook_sections").delete().neq("id", "");
+    // Clear existing data for THIS USER
+    await adminClient.from("section_skills").delete().eq("user_id", user.id);
+    await adminClient.from("staged_edits").delete().eq("created_by", user.id);
+    await adminClient.from("chat_messages").delete().eq("created_by", user.id);
+    await adminClient.from("playbook_sections").delete().eq("user_id", user.id);
+
+    // Reset all user_skills to "missing" for this user
+    await adminClient
+      .from("user_skills")
+      .update({ status: "missing", last_updated: null, section_title: null })
+      .eq("user_id", user.id);
 
     // Insert analyzed sections
     for (let i = 0; i < analysis.sections.length; i++) {
       const section = analysis.sections[i];
-      const sectionId = `notion-${i + 1}`;
 
-      await adminClient.from("playbook_sections").upsert({
-        id: sectionId,
+      await adminClient.from("playbook_sections").insert({
+        user_id: user.id,
         title: section.title,
         content: section.content,
         sort_order: i + 1,
@@ -355,16 +362,27 @@ Return valid JSON with this structure:
       });
     }
 
-    // Update skill statuses based on analysis
+    // Update skill statuses based on analysis (Notion returns skill names, not IDs)
     if (analysis.skillAssessments) {
       for (const assessment of analysis.skillAssessments) {
-        await adminClient
+        // Look up skill ID by name
+        const { data: matchedSkills } = await adminClient
           .from("skills")
-          .update({
-            status: assessment.status,
-            last_updated: sourceDate,
-          })
+          .select("id")
           .ilike("name", `%${assessment.name}%`);
+
+        if (matchedSkills && matchedSkills.length > 0) {
+          for (const skill of matchedSkills) {
+            await adminClient
+              .from("user_skills")
+              .update({
+                status: assessment.status,
+                last_updated: sourceDate,
+              })
+              .eq("user_id", user.id)
+              .eq("skill_id", skill.id);
+          }
+        }
       }
     }
 

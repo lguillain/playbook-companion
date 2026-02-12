@@ -1,7 +1,9 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
 export function usePublish() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async (provider: string) => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -25,6 +27,9 @@ export function usePublish() {
       }
 
       return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["staged-edits"] });
     },
   });
 }

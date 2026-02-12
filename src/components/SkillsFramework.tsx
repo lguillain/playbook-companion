@@ -77,7 +77,8 @@ export const SkillsFramework = ({ onFillGap, statusFilter }: { onFillGap?: (skil
                 {filteredSkills.map((skill) => {
                   const config = statusConfig[skill.status];
                   const Icon = config.icon;
-                  const isActionable = skill.status === "missing" || skill.status === "partial";
+                  const outdated = isSkillOutdated(skill.lastUpdated);
+                  const isActionable = skill.status === "missing" || skill.status === "partial" || outdated;
 
                   return (
                     <div
@@ -91,12 +92,12 @@ export const SkillsFramework = ({ onFillGap, statusFilter }: { onFillGap?: (skil
                       </div>
                       <div className="flex items-center gap-2">
                         {skill.lastUpdated && (
-                          <span className={`text-[10px] font-mono ${isSkillOutdated(skill.lastUpdated) ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+                          <span className={`text-[10px] font-mono ${outdated ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
                             {skill.lastUpdated}
                           </span>
                         )}
                         {isActionable && (
-                          <span className="text-[10px] font-semibold text-primary">Fill →</span>
+                          <span className="text-[10px] font-semibold text-primary">{outdated && skill.status === "covered" ? "Update →" : "Fill →"}</span>
                         )}
                       </div>
                     </div>

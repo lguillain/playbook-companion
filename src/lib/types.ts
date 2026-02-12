@@ -19,15 +19,21 @@ export type SkillRow = {
   id: string;
   category_id: string;
   name: string;
-  status: "covered" | "partial" | "missing";
-  last_updated: string | null;
-  section_title: string | null;
   sort_order: number;
   created_at: string;
 };
 
+export type UserSkillRow = {
+  user_id: string;
+  skill_id: string;
+  status: "covered" | "partial" | "missing";
+  last_updated: string | null;
+  section_title: string | null;
+};
+
 export type PlaybookSectionRow = {
   id: string;
+  user_id: string;
   title: string;
   content: string;
   sort_order: number;

@@ -1,3 +1,17 @@
+-- Ensure skill categories exist (needed for foreign key on fresh databases)
+insert into skill_categories (id, name, sort_order) values
+  ('icp', 'ICP & Problem Landscape', 1),
+  ('messaging', 'Value Proposition & Messaging', 2),
+  ('vocabulary', 'Sales Vocabulary & Buyer Language', 3),
+  ('qualification', 'Qualification & Risk Assessment', 4),
+  ('process', 'Sales Process & Meeting Sequences', 5),
+  ('discovery', 'Discovery & Customer-Centric Questioning', 6),
+  ('demo', 'Demo & Solution Fit', 7),
+  ('objections', 'Objection & Pricing Handling', 8),
+  ('tools', 'Tools, Tech Stack & Usage', 9),
+  ('deals', 'Opportunity Management & Deal Control', 10)
+on conflict (id) do nothing;
+
 -- Add the 14 new skills to reach 5 per category (50 total)
 -- These are inserted with "missing" status since they represent gaps
 

@@ -3,10 +3,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { usePlaybookSections, useUpdateSection } from "@/hooks/use-playbook-sections";
 import { useSkills } from "@/hooks/use-skills";
 import { useCreateStagedEdit } from "@/hooks/use-staged-edits";
-import { FileText, Clock, ChevronRight, CheckCircle2, AlertTriangle, XCircle, Pencil, X, Save, Loader2, Filter } from "lucide-react";
+import { FileText, Clock, ChevronRight, CheckCircle2, AlertTriangle, XCircle, Pencil, X, Save, Loader2, Filter, ChevronsUpDown, Check } from "lucide-react";
 import { toast } from "sonner";
 import { ChatEditor } from "./ChatEditor";
 import { Markdown } from "./Markdown";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 /** Extract the changed region with a few lines of context. */
 function focusedDiff(before: string, after: string, contextLines = 2): { before: string; after: string } {
@@ -39,6 +41,114 @@ const statusIcon = {
   missing: { icon: XCircle, color: "text-destructive", bg: "bg-destructive/10" },
 };
 
+const isSkillOutdated = (lastUpdated?: string) => {
+  if (!lastUpdated) return false;
+  return (new Date().getTime() - new Date(lastUpdated).getTime()) > 90 * 24 * 60 * 60 * 1000;
+};
+
+type StatusFilterKey = "covered" | "partial" | "missing" | "outdated";
+
+const statusPillConfig: { key: StatusFilterKey; icon: typeof CheckCircle2; label: string; color: string }[] = [
+  { key: "covered", icon: CheckCircle2, label: "Covered", color: "text-success" },
+  { key: "partial", icon: AlertTriangle, label: "Partial", color: "text-warning" },
+  { key: "missing", icon: XCircle, label: "Missing", color: "text-destructive" },
+  { key: "outdated", icon: Clock, label: "Outdated", color: "text-muted-foreground" },
+];
+
+type SkillFilterComboboxProps = {
+  skillFilter: { skillId: string; skillName: string } | null | undefined;
+  skillsFramework: import("@/lib/types").SkillCategory[] | undefined;
+  allSkills: import("@/lib/types").Skill[];
+  onSkillFilterChange: (filter: { skillId: string; skillName: string } | null) => void;
+};
+
+const skillStatusIcon = {
+  covered: { Icon: CheckCircle2, color: "text-success" },
+  partial: { Icon: AlertTriangle, color: "text-warning" },
+  missing: { Icon: XCircle, color: "text-destructive" },
+};
+
+function SkillFilterCombobox({ skillFilter, skillsFramework, allSkills, onSkillFilterChange }: SkillFilterComboboxProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="px-3 py-2 border-b border-border/50">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            role="combobox"
+            aria-expanded={open}
+            className="flex w-full items-center justify-between rounded-md border border-border bg-muted/30 px-2 py-1.5 text-[11px] text-foreground outline-none focus:ring-1 focus:ring-primary/30 hover:bg-muted/50 transition-colors"
+          >
+            {skillFilter ? (
+              <span className="flex items-center gap-1.5 truncate">
+                {(() => {
+                  const skill = allSkills.find((s) => s.id === skillFilter.skillId);
+                  if (!skill) return skillFilter.skillName;
+                  const { Icon, color } = skillStatusIcon[skill.status];
+                  return (
+                    <>
+                      <Icon className={`w-3 h-3 flex-shrink-0 ${color}`} />
+                      <span className="truncate">{skill.name}</span>
+                    </>
+                  );
+                })()}
+              </span>
+            ) : (
+              <span className="text-muted-foreground">All sections</span>
+            )}
+            <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-56 p-0" align="start">
+          <Command>
+            <CommandInput placeholder="Filter by skill..." className="h-8 text-xs" />
+            <CommandList>
+              <CommandEmpty>No skill found.</CommandEmpty>
+              <CommandGroup>
+                <CommandItem
+                  value="__all__"
+                  onSelect={() => {
+                    onSkillFilterChange(null);
+                    setOpen(false);
+                  }}
+                  className="text-xs"
+                >
+                  <Check className={`mr-1.5 h-3 w-3 ${!skillFilter ? "opacity-100" : "opacity-0"}`} />
+                  All sections
+                </CommandItem>
+              </CommandGroup>
+              {skillsFramework?.map((cat) => (
+                <CommandGroup key={cat.id} heading={cat.name}>
+                  {cat.skills.map((skill) => {
+                    const { Icon, color } = skillStatusIcon[skill.status];
+                    const isSelected = skillFilter?.skillId === skill.id;
+                    return (
+                      <CommandItem
+                        key={skill.id}
+                        value={skill.name}
+                        onSelect={() => {
+                          onSkillFilterChange({ skillId: skill.id, skillName: skill.name });
+                          setOpen(false);
+                        }}
+                        className="text-xs"
+                      >
+                        <Check className={`mr-1.5 h-3 w-3 flex-shrink-0 ${isSelected ? "opacity-100" : "opacity-0"}`} />
+                        <Icon className={`mr-1.5 h-3 w-3 flex-shrink-0 ${color}`} />
+                        <span className="truncate">{skill.name}</span>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              ))}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
 type PlaybookViewerProps = {
   skillFilter?: { skillId: string; skillName: string } | null;
   onSkillFilterChange: (filter: { skillId: string; skillName: string } | null) => void;
@@ -54,50 +164,117 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookVie
   const [editing, setEditing] = useState(false);
   const [editDraft, setEditDraft] = useState("");
   const [savedFlash, setSavedFlash] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilterKey | null>(null);
 
   const allSkills = useMemo(
     () => skillsFramework?.flatMap((c) => c.skills) ?? [],
     [skillsFramework]
   );
 
+  const getSkillsForSection = useMemo(() => {
+    return (sectionTitle: string) => allSkills.filter((s) => s.section === sectionTitle);
+  }, [allSkills]);
+
   const { displaySections, filterMode } = useMemo<{
     displaySections: typeof sections extends (infer T)[] | undefined ? T[] : never[];
     filterMode: "none" | "direct" | "category" | "unlinked";
   }>(() => {
     if (!sections) return { displaySections: [] as any, filterMode: "none" };
-    if (!skillFilter) return { displaySections: sections, filterMode: "none" };
 
-    const targetSkill = allSkills.find((s) => s.id === skillFilter.skillId);
+    let filtered = sections;
+    let mode: "none" | "direct" | "category" | "unlinked" = "none";
 
-    // 1. Direct match: skill linked to section via junction table or section_title
-    const direct = sections.filter((section) => {
-      if (section.skillsCovered.includes(skillFilter.skillId)) return true;
-      if (targetSkill?.section && targetSkill.section === section.title) return true;
-      return false;
-    });
-    if (direct.length > 0) return { displaySections: direct, filterMode: "direct" };
+    // Apply skill filter first
+    if (skillFilter) {
+      const targetSkill = allSkills.find((s) => s.id === skillFilter.skillId);
 
-    // 2. Category match: sections linked to sibling skills in the same category
-    const category = skillsFramework?.find((c) => c.skills.some((s) => s.id === skillFilter.skillId));
-    if (category) {
-      const siblingIds = new Set(category.skills.map((s) => s.id));
-      const byCat = sections.filter((section) =>
-        section.skillsCovered.some((sid) => siblingIds.has(sid))
-      );
-      if (byCat.length > 0) return { displaySections: byCat, filterMode: "category" };
+      // 1. Direct match: skill linked to section via junction table or section_title
+      const direct = sections.filter((section) => {
+        if (section.skillsCovered.includes(skillFilter.skillId)) return true;
+        if (targetSkill?.section && targetSkill.section === section.title) return true;
+        return false;
+      });
+      if (direct.length > 0) {
+        filtered = direct;
+        mode = "direct";
+      } else {
+        // 2. Category match: sections linked to sibling skills in the same category
+        const category = skillsFramework?.find((c) => c.skills.some((s) => s.id === skillFilter.skillId));
+        if (category) {
+          const siblingIds = new Set(category.skills.map((s) => s.id));
+          const byCat = sections.filter((section) =>
+            section.skillsCovered.some((sid) => siblingIds.has(sid))
+          );
+          if (byCat.length > 0) {
+            filtered = byCat;
+            mode = "category";
+          } else {
+            mode = "unlinked";
+          }
+        } else {
+          mode = "unlinked";
+        }
+      }
     }
 
-    // 3. No match at all — skill needs a new section
-    return { displaySections: sections, filterMode: "unlinked" };
-  }, [skillFilter, sections, allSkills, skillsFramework]);
+    // Apply status filter on top
+    if (statusFilter) {
+      filtered = filtered.filter((section) => {
+        const skills = getSkillsForSection(section.title);
+        if (skills.length === 0) return false;
+        if (statusFilter === "outdated") return skills.some((s) => isSkillOutdated(s.lastUpdated));
+        return skills.some((s) => s.status === statusFilter);
+      });
+    }
+
+    return { displaySections: filtered, filterMode: mode };
+  }, [skillFilter, statusFilter, sections, allSkills, skillsFramework, getSkillsForSection]);
+
+  // Compute status counts for the pills (based on all sections, pre-status-filter)
+  const statusCounts = useMemo(() => {
+    if (!sections) return { covered: 0, partial: 0, missing: 0, outdated: 0 };
+
+    // Use the skill-filtered set (but not status-filtered) as the base
+    let base = sections;
+    if (skillFilter) {
+      const targetSkill = allSkills.find((s) => s.id === skillFilter.skillId);
+      const direct = sections.filter((section) => {
+        if (section.skillsCovered.includes(skillFilter.skillId)) return true;
+        if (targetSkill?.section && targetSkill.section === section.title) return true;
+        return false;
+      });
+      if (direct.length > 0) {
+        base = direct;
+      } else {
+        const category = skillsFramework?.find((c) => c.skills.some((s) => s.id === skillFilter.skillId));
+        if (category) {
+          const siblingIds = new Set(category.skills.map((s) => s.id));
+          const byCat = sections.filter((section) =>
+            section.skillsCovered.some((sid) => siblingIds.has(sid))
+          );
+          if (byCat.length > 0) base = byCat;
+        }
+      }
+    }
+
+    const counts = { covered: 0, partial: 0, missing: 0, outdated: 0 };
+    for (const section of base) {
+      const skills = getSkillsForSection(section.title);
+      if (skills.some((s) => s.status === "covered")) counts.covered++;
+      if (skills.some((s) => s.status === "partial")) counts.partial++;
+      if (skills.some((s) => s.status === "missing")) counts.missing++;
+      if (skills.some((s) => isSkillOutdated(s.lastUpdated))) counts.outdated++;
+    }
+    return counts;
+  }, [sections, skillFilter, allSkills, skillsFramework, getSkillsForSection]);
 
   // Auto-select first section when filter changes or data loads
   useEffect(() => {
-    if (skillFilter && displaySections.length > 0) {
+    if ((skillFilter || statusFilter) && displaySections.length > 0) {
       setActiveSection(displaySections[0].id);
       setEditing(false);
     }
-  }, [skillFilter?.skillId, displaySections]);
+  }, [skillFilter?.skillId, statusFilter, displaySections]);
 
   if (sectionsLoading || skillsLoading || !sections || !skillsFramework) {
     return (
@@ -111,10 +288,6 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookVie
   const current = displaySections.find((s) => s.id === currentId) ?? displaySections[0];
 
   if (!current) return null;
-
-  function getSkillsForSection(sectionTitle: string) {
-    return allSkills.filter((s) => s.section === sectionTitle);
-  }
 
   const sectionSkills = getSkillsForSection(current.title);
 
@@ -163,12 +336,36 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookVie
       transition={{ delay: 0.15 }}
       className="rounded-xl border border-border bg-card shadow-card flex flex-col h-[calc(100vh-180px)]"
     >
-      <div className="px-5 py-4 border-b border-border">
-        <div className="flex items-center gap-2">
-          <FileText className="w-4 h-4 text-primary" />
-          <h2 className="text-sm font-semibold text-foreground">Playbook Content</h2>
+      <div className="px-5 py-3 border-b border-border">
+        <div className="flex items-center gap-6 flex-wrap">
+          <div className="flex items-center gap-3">
+            <FileText className="w-4 h-4 text-primary" />
+            <h2 className="text-sm font-semibold text-foreground">Playbook Content</h2>
+          </div>
+          <div className="h-5 w-px bg-border" />
+          <div className="flex items-center gap-2">
+            {statusPillConfig.map(({ key, icon: Icon, label, color }) => {
+              const count = statusCounts[key];
+              const active = statusFilter === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setStatusFilter(active ? null : key)}
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                    active
+                      ? "bg-primary/10 ring-2 ring-primary/30"
+                      : "bg-muted/50 hover:bg-muted/80"
+                  }`}
+                >
+                  <Icon className={`w-3.5 h-3.5 ${color}`} />
+                  <span className="text-muted-foreground">{label}</span>
+                  <span className={`font-bold font-mono ${color}`}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
           {skillFilter && (
-            <div className="flex items-center gap-2 ml-auto">
+            <div className="flex items-center gap-2">
               <div className="flex items-center gap-1.5">
                 <Filter className="w-3 h-3 text-primary" />
                 <span className="text-[11px] text-muted-foreground">
@@ -191,14 +388,10 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookVie
             </div>
           )}
           <AnimatePresence mode="wait">
-            {savedFlash ? (
+            {savedFlash && (
               <motion.span key="saved" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1 text-[10px] text-success font-semibold">
                 <CheckCircle2 className="w-3 h-3" />
                 Saved — staged for review
-              </motion.span>
-            ) : (
-              <motion.span key="hint" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-[10px] text-muted-foreground">
-                {editing ? "Editing · Markdown supported" : "Click edit to make changes"}
               </motion.span>
             )}
           </AnimatePresence>
@@ -210,35 +403,12 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookVie
         <div className="flex flex-1 overflow-hidden border-r border-border">
           {/* Sidebar */}
           <div className="w-56 border-r border-border flex-shrink-0 flex flex-col">
-            <div className="px-3 py-2 border-b border-border/50">
-              <select
-                value={skillFilter?.skillId ?? ""}
-                onChange={(e) => {
-                  const id = e.target.value;
-                  if (!id) {
-                    onSkillFilterChange(null);
-                  } else {
-                    const skill = allSkills.find((s) => s.id === id);
-                    if (skill) onSkillFilterChange({ skillId: skill.id, skillName: skill.name });
-                  }
-                }}
-                className="w-full rounded-md border border-border bg-muted/30 px-2 py-1.5 text-[11px] text-foreground outline-none focus:ring-1 focus:ring-primary/30"
-              >
-                <option value="">All sections</option>
-                {skillsFramework?.map((cat) => (
-                  <optgroup key={cat.id} label={cat.name}>
-                    {cat.skills.map((skill) => {
-                      const icon = skill.status === "covered" ? "\u2713" : skill.status === "partial" ? "\u25CB" : "\u2715";
-                      return (
-                        <option key={skill.id} value={skill.id}>
-                          {icon} {skill.name}
-                        </option>
-                      );
-                    })}
-                  </optgroup>
-                ))}
-              </select>
-            </div>
+            <SkillFilterCombobox
+              skillFilter={skillFilter}
+              skillsFramework={skillsFramework}
+              allSkills={allSkills}
+              onSkillFilterChange={onSkillFilterChange}
+            />
             <div className="flex-1 overflow-y-auto py-1">
             {displaySections.map((section) => {
               const skills = getSkillsForSection(section.title);

@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 import { env } from "../_shared/env.ts";
 
 const corsHeaders = {
@@ -26,8 +27,22 @@ Deno.serve(async (req) => {
   }
 
   if (action === "connect") {
+    // Authenticate caller to get user ID for state parameter
+    const authHeader = req.headers.get("Authorization");
+    let userId = "";
+    if (authHeader) {
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: authHeader } } }
+      );
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id ?? "";
+    }
+
     const redirectUri = `${PUBLIC_SUPABASE_URL}/functions/v1/notion-callback`;
-    const notionAuthUrl = `https://api.notion.com/v1/oauth/authorize?client_id=${NOTION_CLIENT_ID}&response_type=code&owner=user&redirect_uri=${encodeURIComponent(redirectUri)}`;
+    const state = encodeURIComponent(btoa(JSON.stringify({ userId, nonce: crypto.randomUUID() })));
+    const notionAuthUrl = `https://api.notion.com/v1/oauth/authorize?client_id=${NOTION_CLIENT_ID}&response_type=code&owner=user&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
 
     return new Response(JSON.stringify({ url: notionAuthUrl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

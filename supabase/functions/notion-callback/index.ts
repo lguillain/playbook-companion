@@ -15,6 +15,18 @@ Deno.serve(async (req) => {
     return Response.redirect(`${SITE_URL}?error=no_code`, 302);
   }
 
+  // Decode user ID from state parameter
+  let userId: string | null = null;
+  const stateParam = url.searchParams.get("state");
+  if (stateParam) {
+    try {
+      const decoded = JSON.parse(atob(decodeURIComponent(stateParam)));
+      userId = decoded.userId || null;
+    } catch {
+      console.error("Failed to decode state parameter");
+    }
+  }
+
   try {
     const redirectUri = `${PUBLIC_SUPABASE_URL}/functions/v1/notion-callback`;
     const tokenResponse = await fetch("https://api.notion.com/v1/oauth/token", {
@@ -47,6 +59,7 @@ Deno.serve(async (req) => {
       provider: "notion",
       access_token: tokenData.access_token,
       workspace_id: tokenData.workspace_id ?? null,
+      connected_by: userId,
     });
 
     return Response.redirect(`${SITE_URL}?connected=notion`, 302);

@@ -49,6 +49,7 @@ Deno.serve(async (req) => {
       .from("connections")
       .select("*")
       .eq("provider", "confluence")
+      .eq("connected_by", user.id)
       .order("created_at", { ascending: false })
       .limit(1)
       .single();

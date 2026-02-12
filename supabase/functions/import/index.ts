@@ -137,44 +137,51 @@ Return this JSON structure:
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Clear existing data
-    await adminClient.from("section_skills").delete().neq("section_id", "");
-    await adminClient.from("staged_edits").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await adminClient.from("chat_messages").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    await adminClient.from("playbook_sections").delete().neq("id", "");
+    // Clear existing data for THIS USER
+    await adminClient.from("section_skills").delete().eq("user_id", user.id);
+    await adminClient.from("staged_edits").delete().eq("created_by", user.id);
+    await adminClient.from("chat_messages").delete().eq("created_by", user.id);
+    await adminClient.from("playbook_sections").delete().eq("user_id", user.id);
 
-    // Reset all skills to "missing"
+    // Reset all user_skills to "missing" for this user
     await adminClient
-      .from("skills")
+      .from("user_skills")
       .update({ status: "missing", last_updated: null, section_title: null })
-      .neq("id", "");
+      .eq("user_id", user.id);
 
     const today = new Date().toISOString().split("T")[0];
 
     // Insert sections
     for (let i = 0; i < analysis.sections.length; i++) {
       const section = analysis.sections[i];
-      const sectionId = `imported-${i + 1}`;
 
-      await adminClient.from("playbook_sections").upsert({
-        id: sectionId,
-        title: section.title,
-        content: section.content,
-        sort_order: i + 1,
-        last_updated: today,
-      });
+      const { data: insertedSection } = await adminClient
+        .from("playbook_sections")
+        .insert({
+          user_id: user.id,
+          title: section.title,
+          content: section.content,
+          sort_order: i + 1,
+          last_updated: today,
+        })
+        .select("id")
+        .single();
+
+      if (!insertedSection) continue;
+      const sectionId = insertedSection.id;
 
       // Create section_skills junctions and update skill section_title
       const validSkillIds = (section.skillIds ?? []).filter((id) => ALL_SKILL_IDS.has(id));
       for (const skillId of validSkillIds) {
         await adminClient
           .from("section_skills")
-          .upsert({ section_id: sectionId, skill_id: skillId });
+          .insert({ section_id: sectionId, skill_id: skillId, user_id: user.id });
 
         await adminClient
-          .from("skills")
+          .from("user_skills")
           .update({ section_title: section.title })
-          .eq("id", skillId);
+          .eq("user_id", user.id)
+          .eq("skill_id", skillId);
       }
     }
 
@@ -187,12 +194,13 @@ Return this JSON structure:
           : "missing";
 
         await adminClient
-          .from("skills")
+          .from("user_skills")
           .update({
             status,
             last_updated: status !== "missing" ? today : null,
           })
-          .eq("id", assessment.id);
+          .eq("user_id", user.id)
+          .eq("skill_id", assessment.id);
       }
     }
 
