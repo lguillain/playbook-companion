@@ -207,7 +207,7 @@ export const IntegrationsPanel = () => {
             <div>
               <h3 className="text-sm font-semibold text-foreground">Start over</h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Wipe all playbook sections, staged edits, and chat history. Connections are kept.
+                Wipe all playbook sections, staged edits, chat history, and connections.
               </p>
             </div>
             {confirmReset ? (

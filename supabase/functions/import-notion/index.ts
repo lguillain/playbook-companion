@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { env } from "../_shared/env.ts";
+import { getSkillsPromptBlock, ALL_SKILL_IDS } from "../_shared/skills.ts";
 
 const ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY");
 const NOTION_API_VERSION = "2022-06-28";
@@ -113,10 +114,17 @@ async function fetchAllBlocks(
   return blocks;
 }
 
-/** Search for pages the integration can access. */
-async function searchPages(
+type ParsedPage = {
+  id: string;
+  title: string;
+  markdown: string;
+  lastEdited: string | null;
+};
+
+/** Search for pages the integration can access and fetch their content. */
+async function fetchNotionPages(
   token: string
-): Promise<Array<{ id: string; title: string; lastEdited: string | null }>> {
+): Promise<ParsedPage[]> {
   const res = await fetch("https://api.notion.com/v1/search", {
     method: "POST",
     headers: {
@@ -137,7 +145,9 @@ async function searchPages(
 
   const data = await res.json();
 
-  return data.results.map((page: Record<string, any>) => {
+  const pages: ParsedPage[] = [];
+
+  for (const page of data.results) {
     const titleProp = page.properties?.title ?? page.properties?.Name;
     const title = titleProp?.title
       ? richTextToPlain(titleProp.title)
@@ -145,8 +155,19 @@ async function searchPages(
     const lastEdited = page.last_edited_time
       ? page.last_edited_time.split("T")[0]
       : null;
-    return { id: page.id, title, lastEdited };
-  });
+
+    try {
+      const blocks = await fetchAllBlocks(page.id, token);
+      const markdown = blocksToMarkdown(blocks);
+      if (markdown.trim()) {
+        pages.push({ id: page.id, title, markdown, lastEdited });
+      }
+    } catch (err) {
+      console.error(`Failed to fetch blocks for page ${page.id}:`, err);
+    }
+  }
+
+  return pages;
 }
 
 // ── Main handler ────────────────────────────────────────────────────
@@ -223,10 +244,10 @@ Deno.serve(async (req) => {
 
     if (importError) throw importError;
 
-    // Fetch pages from Notion
-    const pages = await searchPages(notionToken);
+    // Fetch pages from Notion (with content)
+    const parsedPages = await fetchNotionPages(notionToken);
 
-    if (pages.length === 0) {
+    if (parsedPages.length === 0) {
       await adminClient
         .from("imports")
         .update({ status: "failed", error: "No pages found in connected Notion workspace" })
@@ -241,38 +262,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch content from each page and combine
-    const pageContents: string[] = [];
-    for (const page of pages) {
-      try {
-        const blocks = await fetchAllBlocks(page.id, notionToken);
-        const markdown = blocksToMarkdown(blocks);
-        if (markdown.trim()) {
-          pageContents.push(`# ${page.title}\n\n${markdown}`);
-        }
-      } catch (err) {
-        console.error(`Failed to fetch blocks for page ${page.id}:`, err);
-      }
-    }
+    // Build a table-of-contents summary for Claude to map skills
+    const tocSummary = parsedPages.map((p, i) => {
+      return `[Page ${i + 1}] "${p.title}"\n${p.markdown.slice(0, 800)}${p.markdown.length > 800 ? "\n..." : ""}`;
+    }).join("\n\n---\n\n");
 
-    const combinedContent = pageContents.join("\n\n---\n\n");
+    const skillsBlock = getSkillsPromptBlock();
 
-    if (!combinedContent.trim()) {
-      await adminClient
-        .from("imports")
-        .update({ status: "failed", error: "All Notion pages were empty" })
-        .eq("id", importRecord.id);
-
-      return new Response(
-        JSON.stringify({ error: "No content found in Notion pages" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    // Analyze with Claude (same prompt as the PDF import function)
+    // Ask Claude only for skill mapping (same approach as Confluence import)
     const analysisResponse = await fetch(
       "https://api.anthropic.com/v1/messages",
       {
@@ -285,34 +282,35 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           model: "claude-sonnet-4-5-20250929",
           max_tokens: 4096,
-          system: `You are a sales playbook analyzer. Given raw playbook content, you must:
-1. Split it into logical sections (ICP, Qualification, Demo, Objections, Process, etc.)
-2. Map each section to relevant sales skills from this framework:
-   - ICP & Problem Landscape
-   - Value Proposition & Messaging
-   - Sales Vocabulary & Buyer Language
-   - Qualification & Risk Assessment
-   - Sales Process & Meeting Sequences
-   - Discovery & Customer-Centric Questioning
-   - Demo & Solution Fit
-   - Objection & Pricing Handling
-   - Tools, Tech Stack & Usage
-   - Opportunity Management & Deal Control
-3. Assess coverage: "covered" (well-documented), "partial" (mentioned but incomplete), "missing" (not found)
+          system: `You are a sales playbook analyzer. Given page summaries from a playbook, you must:
+1. Map each page (by its index) to the relevant skills from the EXACT list below.
+2. Assess every skill's coverage: "covered" (well-documented), "partial" (mentioned but incomplete), "missing" (not found).
 
-Return valid JSON with this structure:
+SKILLS FRAMEWORK (use ONLY these skill IDs):
+
+${skillsBlock}
+
+RULES:
+- Use ONLY skill IDs from the list above (e.g. "i1", "m2", "dm3"). Do not invent new IDs.
+- Every skill must appear in skillAssessments with a status.
+- Each skill should be mapped to at most ONE page (the most relevant one).
+- Return ONLY valid JSON, no other text.
+
+Return this JSON structure:
 {
-  "sections": [
-    { "title": "...", "content": "...", "skills": ["skill_name_1", "skill_name_2"] }
+  "pageSkills": [
+    { "pageIndex": 0, "skillIds": ["i1", "i2"] },
+    { "pageIndex": 1, "skillIds": ["m1"] }
   ],
   "skillAssessments": [
-    { "name": "...", "category": "...", "status": "covered|partial|missing" }
+    { "id": "i1", "status": "covered" },
+    { "id": "i2", "status": "partial" }
   ]
 }`,
           messages: [
             {
               role: "user",
-              content: `Analyze this playbook content imported from Notion:\n\n${combinedContent}`,
+              content: `Analyze these ${parsedPages.length} playbook pages from Notion:\n\n${tocSummary}`,
             },
           ],
         }),
@@ -329,13 +327,32 @@ Return valid JSON with this structure:
     const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("Failed to parse analysis response");
 
-    const analysis = JSON.parse(jsonMatch[0]);
+    let analysis: {
+      pageSkills: { pageIndex: number; skillIds: string[] }[];
+      skillAssessments: { id: string; status: string }[];
+    };
+    try {
+      analysis = JSON.parse(jsonMatch[0]);
+    } catch (parseErr) {
+      console.error("JSON parse failed. Response length:", analysisText.length);
+      let fixedJson = jsonMatch[0];
+      fixedJson = fixedJson.replace(/,\s*[^,\[\]{}]*$/, "");
+      const opens = (fixedJson.match(/\[/g) || []).length - (fixedJson.match(/\]/g) || []).length;
+      const braces = (fixedJson.match(/\{/g) || []).length - (fixedJson.match(/\}/g) || []).length;
+      for (let i = 0; i < opens; i++) fixedJson += "]";
+      for (let i = 0; i < braces; i++) fixedJson += "}";
+      try {
+        analysis = JSON.parse(fixedJson);
+      } catch {
+        throw new Error(`Failed to parse Claude analysis response: ${(parseErr as Error).message}`);
+      }
+    }
 
-    // Use the most recent Notion page edit date, falling back to today
-    const sourceDates = pages.map((p) => p.lastEdited).filter(Boolean) as string[];
-    const sourceDate = sourceDates.length > 0
-      ? sourceDates.sort().pop()!
-      : new Date().toISOString().split("T")[0];
+    // Build a lookup from pageIndex → skillIds
+    const pageSkillMap = new Map<number, string[]>();
+    for (const ps of analysis.pageSkills ?? []) {
+      pageSkillMap.set(ps.pageIndex, (ps.skillIds ?? []).filter((id) => ALL_SKILL_IDS.has(id)));
+    }
 
     // Clear existing data for THIS USER
     await adminClient.from("section_skills").delete().eq("user_id", user.id);
@@ -349,40 +366,67 @@ Return valid JSON with this structure:
       .update({ status: "missing", last_updated: null, section_title: null })
       .eq("user_id", user.id);
 
-    // Insert analyzed sections
-    for (let i = 0; i < analysis.sections.length; i++) {
-      const section = analysis.sections[i];
+    const fallbackDate = new Date().toISOString().split("T")[0];
 
-      await adminClient.from("playbook_sections").insert({
-        user_id: user.id,
-        title: section.title,
-        content: section.content,
-        sort_order: i + 1,
-        last_updated: sourceDate,
-      });
+    // Insert each Notion page as a section, preserving per-page dates
+    for (let i = 0; i < parsedPages.length; i++) {
+      const page = parsedPages[i];
+
+      const { data: insertedSection } = await adminClient
+        .from("playbook_sections")
+        .insert({
+          user_id: user.id,
+          title: page.title,
+          content: page.markdown,
+          sort_order: i + 1,
+          last_updated: page.lastEdited ?? fallbackDate,
+        })
+        .select("id")
+        .single();
+
+      if (!insertedSection) continue;
+      const sectionId = insertedSection.id;
+
+      const skillIds = pageSkillMap.get(i) ?? [];
+      for (const skillId of skillIds) {
+        await adminClient
+          .from("section_skills")
+          .insert({ section_id: sectionId, skill_id: skillId, user_id: user.id });
+
+        await adminClient
+          .from("user_skills")
+          .update({ section_title: page.title })
+          .eq("user_id", user.id)
+          .eq("skill_id", skillId);
+      }
     }
 
-    // Update skill statuses based on analysis (Notion returns skill names, not IDs)
+    // Build a skill → source date lookup from the page-skill mapping
+    const skillDateMap = new Map<string, string | null>();
+    for (const [pageIndex, skillIds] of pageSkillMap) {
+      const pageDate = parsedPages[pageIndex]?.lastEdited ?? null;
+      for (const skillId of skillIds) {
+        skillDateMap.set(skillId, pageDate);
+      }
+    }
+
+    // Update skill statuses from assessments
     if (analysis.skillAssessments) {
       for (const assessment of analysis.skillAssessments) {
-        // Look up skill ID by name
-        const { data: matchedSkills } = await adminClient
-          .from("skills")
-          .select("id")
-          .ilike("name", `%${assessment.name}%`);
+        if (!ALL_SKILL_IDS.has(assessment.id)) continue;
+        const status = ["covered", "partial", "missing"].includes(assessment.status)
+          ? assessment.status
+          : "missing";
 
-        if (matchedSkills && matchedSkills.length > 0) {
-          for (const skill of matchedSkills) {
-            await adminClient
-              .from("user_skills")
-              .update({
-                status: assessment.status,
-                last_updated: sourceDate,
-              })
-              .eq("user_id", user.id)
-              .eq("skill_id", skill.id);
-          }
-        }
+        const skillDate = skillDateMap.get(assessment.id) ?? fallbackDate;
+        await adminClient
+          .from("user_skills")
+          .update({
+            status,
+            last_updated: status !== "missing" ? skillDate : null,
+          })
+          .eq("user_id", user.id)
+          .eq("skill_id", assessment.id);
       }
     }
 
@@ -393,9 +437,9 @@ Return valid JSON with this structure:
         status: "completed",
         completed_at: new Date().toISOString(),
         metadata: {
-          pages_found: pages.length,
-          pages_with_content: pageContents.length,
-          sections_created: analysis.sections.length,
+          pages_found: parsedPages.length,
+          pages_with_content: parsedPages.length,
+          sections_created: parsedPages.length,
         },
       })
       .eq("id", importRecord.id);
@@ -403,8 +447,8 @@ Return valid JSON with this structure:
     return new Response(
       JSON.stringify({
         importId: importRecord.id,
-        pagesFound: pages.length,
-        sectionsCreated: analysis.sections.length,
+        pagesFound: parsedPages.length,
+        sectionsCreated: parsedPages.length,
         status: "completed",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

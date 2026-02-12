@@ -57,6 +57,9 @@ verify_jwt = false
 [functions.confluence-browse]
 verify_jwt = false
 
+[functions.import-notion]
+verify_jwt = false
+
 [functions.notion-callback]
 verify_jwt = false
 

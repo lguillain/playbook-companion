@@ -44,6 +44,7 @@ export function useResetPlaybook() {
       await supabase.from("chat_messages").delete().neq("id", "00000000-0000-0000-0000-000000000000");
       await supabase.from("playbook_sections").delete().neq("id", "00000000-0000-0000-0000-000000000000");
       await supabase.from("imports").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      await supabase.from("connections").delete().neq("id", "00000000-0000-0000-0000-000000000000");
       // Reset all user_skills to missing (RLS scopes to current user)
       await supabase
         .from("user_skills")
@@ -56,6 +57,7 @@ export function useResetPlaybook() {
       queryClient.invalidateQueries({ queryKey: ["health-score"] });
       queryClient.invalidateQueries({ queryKey: ["staged-edits"] });
       queryClient.invalidateQueries({ queryKey: ["imports"] });
+      queryClient.invalidateQueries({ queryKey: ["connections"] });
     },
   });
 }
