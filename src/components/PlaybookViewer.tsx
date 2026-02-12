@@ -1,8 +1,39 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { playbookSections as initialSections, skillsFramework } from "@/lib/mock-data";
-import { FileText, Clock, ChevronRight, CheckCircle2, AlertTriangle, XCircle, Pencil, X, Save } from "lucide-react";
+import { usePlaybookSections, useUpdateSection } from "@/hooks/use-playbook-sections";
+import { useSkills } from "@/hooks/use-skills";
+import { useCreateStagedEdit } from "@/hooks/use-staged-edits";
+import { FileText, Clock, ChevronRight, CheckCircle2, AlertTriangle, XCircle, Pencil, X, Save, Loader2, Filter, ChevronsUpDown, Check } from "lucide-react";
+import { toast } from "sonner";
 import { ChatEditor } from "./ChatEditor";
+import { Markdown } from "./Markdown";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+
+/** Extract the changed region with a few lines of context. */
+function focusedDiff(before: string, after: string, contextLines = 2): { before: string; after: string } {
+  const a = before.split("\n");
+  const b = after.split("\n");
+
+  // Find first differing line
+  let start = 0;
+  while (start < a.length && start < b.length && a[start] === b[start]) start++;
+
+  // Find last differing line (from end)
+  let endA = a.length - 1;
+  let endB = b.length - 1;
+  while (endA > start && endB > start && a[endA] === b[endB]) { endA--; endB--; }
+
+  // Add context
+  const ctxStart = Math.max(0, start - contextLines);
+  const ctxEndA = Math.min(a.length - 1, endA + contextLines);
+  const ctxEndB = Math.min(b.length - 1, endB + contextLines);
+
+  return {
+    before: a.slice(ctxStart, ctxEndA + 1).join("\n"),
+    after: b.slice(ctxStart, ctxEndB + 1).join("\n"),
+  };
+}
 
 const statusIcon = {
   covered: { icon: CheckCircle2, color: "text-success", bg: "bg-success/10" },
@@ -10,27 +41,254 @@ const statusIcon = {
   missing: { icon: XCircle, color: "text-destructive", bg: "bg-destructive/10" },
 };
 
-function getSkillsForSection(sectionTitle: string) {
-  const allSkills = skillsFramework.flatMap((c) => c.skills);
-  return allSkills.filter((s) => s.section === sectionTitle);
+const isSkillOutdated = (lastUpdated?: string) => {
+  if (!lastUpdated) return false;
+  return (new Date().getTime() - new Date(lastUpdated).getTime()) > 90 * 24 * 60 * 60 * 1000;
+};
+
+type StatusFilterKey = "covered" | "partial" | "missing" | "outdated";
+
+const statusPillConfig: { key: StatusFilterKey; icon: typeof CheckCircle2; label: string; color: string }[] = [
+  { key: "covered", icon: CheckCircle2, label: "Covered", color: "text-success" },
+  { key: "partial", icon: AlertTriangle, label: "Partial", color: "text-warning" },
+  { key: "missing", icon: XCircle, label: "Missing", color: "text-destructive" },
+  { key: "outdated", icon: Clock, label: "Outdated", color: "text-muted-foreground" },
+];
+
+type SkillFilterComboboxProps = {
+  skillFilter: { skillId: string; skillName: string } | null | undefined;
+  skillsFramework: import("@/lib/types").SkillCategory[] | undefined;
+  allSkills: import("@/lib/types").Skill[];
+  onSkillFilterChange: (filter: { skillId: string; skillName: string } | null) => void;
+};
+
+const skillStatusIcon = {
+  covered: { Icon: CheckCircle2, color: "text-success" },
+  partial: { Icon: AlertTriangle, color: "text-warning" },
+  missing: { Icon: XCircle, color: "text-destructive" },
+};
+
+function SkillFilterCombobox({ skillFilter, skillsFramework, allSkills, onSkillFilterChange }: SkillFilterComboboxProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="px-3 py-2 border-b border-border/50">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            role="combobox"
+            aria-expanded={open}
+            className="flex w-full items-center justify-between rounded-md border border-border bg-muted/30 px-2 py-1.5 text-[11px] text-foreground outline-none focus:ring-1 focus:ring-primary/30 hover:bg-muted/50 transition-colors"
+          >
+            {skillFilter ? (
+              <span className="flex items-center gap-1.5 truncate">
+                {(() => {
+                  const skill = allSkills.find((s) => s.id === skillFilter.skillId);
+                  if (!skill) return skillFilter.skillName;
+                  const { Icon, color } = skillStatusIcon[skill.status];
+                  return (
+                    <>
+                      <Icon className={`w-3 h-3 flex-shrink-0 ${color}`} />
+                      <span className="truncate">{skill.name}</span>
+                    </>
+                  );
+                })()}
+              </span>
+            ) : (
+              <span className="text-muted-foreground">All sections</span>
+            )}
+            <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-56 p-0" align="start">
+          <Command>
+            <CommandInput placeholder="Filter by skill..." className="h-8 text-xs" />
+            <CommandList>
+              <CommandEmpty>No skill found.</CommandEmpty>
+              <CommandGroup>
+                <CommandItem
+                  value="__all__"
+                  onSelect={() => {
+                    onSkillFilterChange(null);
+                    setOpen(false);
+                  }}
+                  className="text-xs"
+                >
+                  <Check className={`mr-1.5 h-3 w-3 ${!skillFilter ? "opacity-100" : "opacity-0"}`} />
+                  All sections
+                </CommandItem>
+              </CommandGroup>
+              {skillsFramework?.map((cat) => (
+                <CommandGroup key={cat.id} heading={cat.name}>
+                  {cat.skills.map((skill) => {
+                    const { Icon, color } = skillStatusIcon[skill.status];
+                    const isSelected = skillFilter?.skillId === skill.id;
+                    return (
+                      <CommandItem
+                        key={skill.id}
+                        value={skill.name}
+                        onSelect={() => {
+                          onSkillFilterChange({ skillId: skill.id, skillName: skill.name });
+                          setOpen(false);
+                        }}
+                        className="text-xs"
+                      >
+                        <Check className={`mr-1.5 h-3 w-3 flex-shrink-0 ${isSelected ? "opacity-100" : "opacity-0"}`} />
+                        <Icon className={`mr-1.5 h-3 w-3 flex-shrink-0 ${color}`} />
+                        <span className="truncate">{skill.name}</span>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              ))}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
 }
 
-function getMissingSkillsForSection(sectionId: string) {
-  const section = initialSections.find((s) => s.id === sectionId);
-  if (!section) return [];
-  const allSkills = skillsFramework.flatMap((c) => c.skills);
-  // Skills that point to this section but aren't in skillsCovered (i.e. the section exists but skill is still partial/missing)
-  const coveredIds = new Set(section.skillsCovered);
-  return allSkills.filter((s) => s.section === section.title && !coveredIds.includes(s.id) && s.status !== "covered");
-}
+type PlaybookViewerProps = {
+  skillFilter?: { skillId: string; skillName: string } | null;
+  onSkillFilterChange: (filter: { skillId: string; skillName: string } | null) => void;
+};
 
-export const PlaybookViewer = () => {
-  const [sections, setSections] = useState(initialSections);
-  const [activeSection, setActiveSection] = useState(sections[0].id);
+export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookViewerProps) => {
+  const { data: sections, isLoading: sectionsLoading } = usePlaybookSections();
+  const { data: skillsFramework, isLoading: skillsLoading } = useSkills();
+  const updateSection = useUpdateSection();
+  const createEdit = useCreateStagedEdit();
+
+  const [activeSection, setActiveSection] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [editDraft, setEditDraft] = useState("");
   const [savedFlash, setSavedFlash] = useState(false);
-  const current = sections.find((s) => s.id === activeSection)!;
+  const [statusFilter, setStatusFilter] = useState<StatusFilterKey | null>(null);
+
+  const allSkills = useMemo(
+    () => skillsFramework?.flatMap((c) => c.skills) ?? [],
+    [skillsFramework]
+  );
+
+  const getSkillsForSection = useMemo(() => {
+    return (sectionTitle: string) => allSkills.filter((s) => s.section === sectionTitle);
+  }, [allSkills]);
+
+  const { displaySections, filterMode } = useMemo<{
+    displaySections: typeof sections extends (infer T)[] | undefined ? T[] : never[];
+    filterMode: "none" | "direct" | "category" | "unlinked";
+  }>(() => {
+    if (!sections) return { displaySections: [] as any, filterMode: "none" };
+
+    let filtered = sections;
+    let mode: "none" | "direct" | "category" | "unlinked" = "none";
+
+    // Apply skill filter first
+    if (skillFilter) {
+      const targetSkill = allSkills.find((s) => s.id === skillFilter.skillId);
+
+      // 1. Direct match: skill linked to section via junction table or section_title
+      const direct = sections.filter((section) => {
+        if (section.skillsCovered.includes(skillFilter.skillId)) return true;
+        if (targetSkill?.section && targetSkill.section === section.title) return true;
+        return false;
+      });
+      if (direct.length > 0) {
+        filtered = direct;
+        mode = "direct";
+      } else {
+        // 2. Category match: sections linked to sibling skills in the same category
+        const category = skillsFramework?.find((c) => c.skills.some((s) => s.id === skillFilter.skillId));
+        if (category) {
+          const siblingIds = new Set(category.skills.map((s) => s.id));
+          const byCat = sections.filter((section) =>
+            section.skillsCovered.some((sid) => siblingIds.has(sid))
+          );
+          if (byCat.length > 0) {
+            filtered = byCat;
+            mode = "category";
+          } else {
+            mode = "unlinked";
+          }
+        } else {
+          mode = "unlinked";
+        }
+      }
+    }
+
+    // Apply status filter on top
+    if (statusFilter) {
+      filtered = filtered.filter((section) => {
+        const skills = getSkillsForSection(section.title);
+        if (skills.length === 0) return false;
+        if (statusFilter === "outdated") return skills.some((s) => isSkillOutdated(s.lastUpdated));
+        return skills.some((s) => s.status === statusFilter);
+      });
+    }
+
+    return { displaySections: filtered, filterMode: mode };
+  }, [skillFilter, statusFilter, sections, allSkills, skillsFramework, getSkillsForSection]);
+
+  // Compute status counts for the pills (based on all sections, pre-status-filter)
+  const statusCounts = useMemo(() => {
+    if (!sections) return { covered: 0, partial: 0, missing: 0, outdated: 0 };
+
+    // Use the skill-filtered set (but not status-filtered) as the base
+    let base = sections;
+    if (skillFilter) {
+      const targetSkill = allSkills.find((s) => s.id === skillFilter.skillId);
+      const direct = sections.filter((section) => {
+        if (section.skillsCovered.includes(skillFilter.skillId)) return true;
+        if (targetSkill?.section && targetSkill.section === section.title) return true;
+        return false;
+      });
+      if (direct.length > 0) {
+        base = direct;
+      } else {
+        const category = skillsFramework?.find((c) => c.skills.some((s) => s.id === skillFilter.skillId));
+        if (category) {
+          const siblingIds = new Set(category.skills.map((s) => s.id));
+          const byCat = sections.filter((section) =>
+            section.skillsCovered.some((sid) => siblingIds.has(sid))
+          );
+          if (byCat.length > 0) base = byCat;
+        }
+      }
+    }
+
+    const counts = { covered: 0, partial: 0, missing: 0, outdated: 0 };
+    for (const section of base) {
+      const skills = getSkillsForSection(section.title);
+      if (skills.some((s) => s.status === "covered")) counts.covered++;
+      if (skills.some((s) => s.status === "partial")) counts.partial++;
+      if (skills.some((s) => s.status === "missing")) counts.missing++;
+      if (skills.some((s) => isSkillOutdated(s.lastUpdated))) counts.outdated++;
+    }
+    return counts;
+  }, [sections, skillFilter, allSkills, skillsFramework, getSkillsForSection]);
+
+  // Auto-select first section when filter changes or data loads
+  useEffect(() => {
+    if ((skillFilter || statusFilter) && displaySections.length > 0) {
+      setActiveSection(displaySections[0].id);
+      setEditing(false);
+    }
+  }, [skillFilter?.skillId, statusFilter, displaySections]);
+
+  if (sectionsLoading || skillsLoading || !sections || !skillsFramework) {
+    return (
+      <div className="rounded-xl border border-border bg-card shadow-card flex items-center justify-center h-[calc(100vh-180px)]">
+        <Loader2 className="w-6 h-6 text-primary animate-spin" />
+      </div>
+    );
+  }
+
+  const currentId = activeSection ?? displaySections[0]?.id;
+  const current = displaySections.find((s) => s.id === currentId) ?? displaySections[0];
+
+  if (!current) return null;
+
   const sectionSkills = getSkillsForSection(current.title);
 
   const startEditing = () => {
@@ -43,18 +301,32 @@ export const PlaybookViewer = () => {
     setEditDraft("");
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (editDraft === current.content) {
       setEditing(false);
       return;
     }
-    setSections((prev) =>
-      prev.map((s) => (s.id === activeSection ? { ...s, content: editDraft } : s))
-    );
-    setEditing(false);
-    setEditDraft("");
-    setSavedFlash(true);
-    setTimeout(() => setSavedFlash(false), 2000);
+
+    const diff = focusedDiff(current.content, editDraft);
+
+    try {
+      // Directly update the section content
+      await updateSection.mutateAsync({ id: current.id, content: editDraft });
+      // Record as auto-approved staged edit (focused diff for audit trail)
+      await createEdit.mutateAsync({
+        sectionId: current.id,
+        before: diff.before,
+        after: diff.after,
+        source: "manual",
+        autoApprove: true,
+      });
+      setEditing(false);
+      setEditDraft("");
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 2000);
+    } catch {
+      toast.error("Failed to save edit");
+    }
   };
 
   return (
@@ -64,19 +336,62 @@ export const PlaybookViewer = () => {
       transition={{ delay: 0.15 }}
       className="rounded-xl border border-border bg-card shadow-card flex flex-col h-[calc(100vh-180px)]"
     >
-      <div className="px-5 py-4 border-b border-border">
-        <div className="flex items-center gap-2">
-          <FileText className="w-4 h-4 text-primary" />
-          <h2 className="text-sm font-semibold text-foreground">Playbook Content</h2>
+      <div className="px-5 py-3 border-b border-border">
+        <div className="flex items-center gap-6 flex-wrap">
+          <div className="flex items-center gap-3">
+            <FileText className="w-4 h-4 text-primary" />
+            <h2 className="text-sm font-semibold text-foreground">Playbook Content</h2>
+          </div>
+          <div className="h-5 w-px bg-border" />
+          <div className="flex items-center gap-2">
+            {statusPillConfig.map(({ key, icon: Icon, label, color }) => {
+              const count = statusCounts[key];
+              const active = statusFilter === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setStatusFilter(active ? null : key)}
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                    active
+                      ? "bg-primary/10 ring-2 ring-primary/30"
+                      : "bg-muted/50 hover:bg-muted/80"
+                  }`}
+                >
+                  <Icon className={`w-3.5 h-3.5 ${color}`} />
+                  <span className="text-muted-foreground">{label}</span>
+                  <span className={`font-bold font-mono ${color}`}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+          {skillFilter && (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <Filter className="w-3 h-3 text-primary" />
+                <span className="text-[11px] text-muted-foreground">
+                  {filterMode === "direct" && `${displaySections.length} section${displaySections.length !== 1 ? "s" : ""} for`}
+                  {filterMode === "category" && `${displaySections.length} related section${displaySections.length !== 1 ? "s" : ""} for`}
+                  {filterMode === "unlinked" && "No linked sections for"}
+                </span>
+                <span className="text-[11px] font-semibold text-primary">{skillFilter.skillName}</span>
+                {filterMode === "unlinked" && (
+                  <span className="text-[11px] text-muted-foreground">— consider adding a new section</span>
+                )}
+              </div>
+              <button
+                onClick={() => onSkillFilterChange(null)}
+                className="flex items-center gap-1 rounded-lg bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground hover:bg-muted/80 transition-colors"
+              >
+                <X className="w-2.5 h-2.5" />
+                Clear
+              </button>
+            </div>
+          )}
           <AnimatePresence mode="wait">
-            {savedFlash ? (
+            {savedFlash && (
               <motion.span key="saved" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1 text-[10px] text-success font-semibold">
                 <CheckCircle2 className="w-3 h-3" />
                 Saved — staged for review
-              </motion.span>
-            ) : (
-              <motion.span key="hint" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-[10px] text-muted-foreground">
-                {editing ? "Editing · Markdown supported" : "Click edit to make changes"}
               </motion.span>
             )}
           </AnimatePresence>
@@ -87,8 +402,15 @@ export const PlaybookViewer = () => {
         {/* Left Side: Playbook Navigation & Content */}
         <div className="flex flex-1 overflow-hidden border-r border-border">
           {/* Sidebar */}
-          <div className="w-56 border-r border-border overflow-y-auto py-2 flex-shrink-0">
-            {sections.map((section) => {
+          <div className="w-56 border-r border-border flex-shrink-0 flex flex-col">
+            <SkillFilterCombobox
+              skillFilter={skillFilter}
+              skillsFramework={skillsFramework}
+              allSkills={allSkills}
+              onSkillFilterChange={onSkillFilterChange}
+            />
+            <div className="flex-1 overflow-y-auto py-1">
+            {displaySections.map((section) => {
               const skills = getSkillsForSection(section.title);
               const coveredCount = skills.filter((s) => s.status === "covered").length;
               const totalCount = skills.length;
@@ -98,12 +420,12 @@ export const PlaybookViewer = () => {
                   key={section.id}
                   onClick={() => { setActiveSection(section.id); setEditing(false); }}
                   className={`w-full text-left px-4 py-2.5 flex items-start gap-2 text-xs transition-colors ${
-                    activeSection === section.id
+                    currentId === section.id
                       ? "bg-primary/10 text-primary border-r-2 border-primary"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   }`}
                 >
-                  <ChevronRight className={`w-3 h-3 mt-0.5 flex-shrink-0 transition-transform ${activeSection === section.id ? "rotate-90" : ""}`} />
+                  <ChevronRight className={`w-3 h-3 mt-0.5 flex-shrink-0 transition-transform ${currentId === section.id ? "rotate-90" : ""}`} />
                   <div>
                     <span className="block">{section.title}</span>
                     {totalCount > 0 && (
@@ -115,13 +437,14 @@ export const PlaybookViewer = () => {
                 </button>
               );
             })}
+            </div>
           </div>
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-6">
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-3">
-                <h3 className="text-lg font-bold text-foreground">{current.title}</h3>
+                <h3 className="text-lg font-bold text-foreground">{current.title.replace(/^\u00A0+/, "")}</h3>
                 <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono bg-muted rounded px-2 py-0.5">
                   <Clock className="w-2.5 h-2.5" />
                   {current.lastUpdated}
@@ -145,9 +468,14 @@ export const PlaybookViewer = () => {
                     </button>
                     <button
                       onClick={saveEdit}
-                      className="flex items-center gap-1 rounded-lg gradient-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground transition-opacity"
+                      disabled={updateSection.isPending}
+                      className="flex items-center gap-1 rounded-lg gradient-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground transition-opacity disabled:opacity-50"
                     >
-                      <Save className="w-3 h-3" />
+                      {updateSection.isPending ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Save className="w-3 h-3" />
+                      )}
                       Save
                     </button>
                   </div>
@@ -179,19 +507,7 @@ export const PlaybookViewer = () => {
                 autoFocus
               />
             ) : (
-              <div className="prose prose-sm max-w-none">
-                {current.content.split("\n").map((line, i) => {
-                  if (line.startsWith("## ")) return <h2 key={i} className="text-base font-bold text-foreground mt-4 mb-2">{line.replace("## ", "")}</h2>;
-                  if (line.startsWith("### ")) return <h3 key={i} className="text-sm font-semibold text-foreground mt-3 mb-1.5">{line.replace("### ", "")}</h3>;
-                  if (line.startsWith("- ")) return <li key={i} className="text-sm text-secondary-foreground ml-4 list-disc">{line.replace("- ", "")}</li>;
-                  if (line.startsWith("| ")) return <p key={i} className="text-xs font-mono text-muted-foreground">{line}</p>;
-                  if (line.startsWith("**")) return <p key={i} className="text-sm font-semibold text-foreground mt-2">{line.replace(/\*\*/g, "")}</p>;
-                  if (line.startsWith(">")) return <blockquote key={i} className="border-l-2 border-primary pl-3 text-sm text-muted-foreground italic my-2">{line.replace("> ", "")}</blockquote>;
-                  if (line.match(/^\d+\./)) return <li key={i} className="text-sm text-secondary-foreground ml-4 list-decimal">{line.replace(/^\d+\.\s/, "")}</li>;
-                  if (line.trim() === "") return <br key={i} />;
-                  return <p key={i} className="text-sm text-secondary-foreground leading-relaxed">{line}</p>;
-                })}
-              </div>
+              <Markdown>{current.content}</Markdown>
             )}
           </div>
         </div>

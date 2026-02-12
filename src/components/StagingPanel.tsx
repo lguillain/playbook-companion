@@ -1,16 +1,64 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { stagedEdits as initialEdits, type StagedEdit } from "@/lib/mock-data";
-import { GitBranch, Check, X, Send, Bell, MessageSquare, Edit3 } from "lucide-react";
+import { useStagedEdits, useApproveEdit, useRejectEdit } from "@/hooks/use-staged-edits";
+import { usePublish, useNotify } from "@/hooks/use-publish";
+import { useConnections } from "@/hooks/use-connections";
+import { GitBranch, Check, X, Send, Bell, MessageSquare, Edit3, Loader2, Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
+import { Markdown } from "./Markdown";
+
+const providerLabels: Record<string, string> = {
+  confluence: "Confluence",
+  notion: "Notion",
+};
 
 export const StagingPanel = () => {
-  const [edits, setEdits] = useState<StagedEdit[]>(initialEdits);
-  const [pushed, setPushed] = useState(false);
+  const { data: edits, isLoading } = useStagedEdits();
+  const { data: connections } = useConnections();
+  const approveEdit = useApproveEdit();
+  const rejectEdit = useRejectEdit();
+  const publish = usePublish();
+  const notify = useNotify();
+  const [showRejected, setShowRejected] = useState(false);
+
+  // Determine which provider to publish to based on connected integrations
+  const connectedProvider = connections?.find((c) => c.provider === "confluence" || c.provider === "notion")?.provider ?? null;
+  const publishLabel = connectedProvider ? providerLabels[connectedProvider] ?? connectedProvider : null;
+
+  if (isLoading || !edits) {
+    return (
+      <div className="rounded-xl border border-border bg-card p-6 shadow-card flex items-center justify-center min-h-[300px]">
+        <Loader2 className="w-6 h-6 text-primary animate-spin" />
+      </div>
+    );
+  }
 
   const pending = edits.filter((e) => e.status === "pending");
+  const rejected = edits.filter((e) => e.status === "rejected");
+  const hasApproved = edits.some((e) => e.status === "approved");
+  const visibleEdits = showRejected ? edits : edits.filter((e) => e.status !== "rejected");
 
-  const approve = (id: string) => setEdits((prev) => prev.map((e) => (e.id === id ? { ...e, status: "approved" } : e)));
-  const reject = (id: string) => setEdits((prev) => prev.map((e) => (e.id === id ? { ...e, status: "rejected" } : e)));
+  const handlePublish = async () => {
+    if (!connectedProvider) return;
+    try {
+      const result = await publish.mutateAsync(connectedProvider);
+      toast.success(`Published ${result.published} section(s) to ${publishLabel}`);
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
+  const handleNudge = async () => {
+    try {
+      const result = await notify.mutateAsync({
+        type: "slack",
+        message: "Your playbook has been updated! Check out the latest changes.",
+      });
+      toast.success(`Notified ${result.notified} team member(s)`);
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
 
   return (
     <motion.div
@@ -28,25 +76,48 @@ export const StagingPanel = () => {
               {pending.length} pending
             </span>
           )}
+          {rejected.length > 0 && (
+            <button
+              onClick={() => setShowRejected((v) => !v)}
+              className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {showRejected ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+              {rejected.length} rejected
+            </button>
+          )}
         </div>
         <div className="flex gap-2">
+          {publishLabel && (
+            <button
+              disabled={!hasApproved || publish.isPending}
+              onClick={handlePublish}
+              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-30 transition-opacity"
+            >
+              {publish.isPending ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Send className="w-3 h-3" />
+              )}
+              {publish.isSuccess ? "Pushed!" : `Push to ${publishLabel}`}
+            </button>
+          )}
           <button
-            disabled={!edits.some((e) => e.status === "approved") || pushed}
-            onClick={() => setPushed(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-30 transition-opacity"
+            onClick={handleNudge}
+            disabled={notify.isPending}
+            className="flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground disabled:opacity-30"
           >
-            <Send className="w-3 h-3" />
-            {pushed ? "Pushed!" : "Push to Notion"}
-          </button>
-          <button className="flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground">
-            <Bell className="w-3 h-3" />
+            {notify.isPending ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <Bell className="w-3 h-3" />
+            )}
             Nudge Reps
           </button>
         </div>
       </div>
 
       <div className="space-y-3">
-        {edits.map((edit) => (
+        {visibleEdits.map((edit) => (
           <motion.div
             key={edit.id}
             layout
@@ -92,10 +163,18 @@ export const StagingPanel = () => {
               </div>
               {edit.status === "pending" && (
                 <div className="flex gap-1">
-                  <button onClick={() => approve(edit.id)} className="w-6 h-6 rounded bg-success/15 flex items-center justify-center hover:bg-success/25 transition-colors">
+                  <button
+                    onClick={() => approveEdit.mutate(edit.id)}
+                    disabled={approveEdit.isPending}
+                    className="w-6 h-6 rounded bg-success/15 flex items-center justify-center hover:bg-success/25 transition-colors"
+                  >
                     <Check className="w-3 h-3 text-success" />
                   </button>
-                  <button onClick={() => reject(edit.id)} className="w-6 h-6 rounded bg-destructive/15 flex items-center justify-center hover:bg-destructive/25 transition-colors">
+                  <button
+                    onClick={() => rejectEdit.mutate(edit.id)}
+                    disabled={rejectEdit.isPending}
+                    className="w-6 h-6 rounded bg-destructive/15 flex items-center justify-center hover:bg-destructive/25 transition-colors"
+                  >
                     <X className="w-3 h-3 text-destructive" />
                   </button>
                 </div>
@@ -106,21 +185,25 @@ export const StagingPanel = () => {
               <div>
                 <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Before</span>
                 <div className="mt-1 rounded bg-destructive/5 border border-destructive/10 p-2 text-muted-foreground leading-relaxed min-h-[40px]">
-                  {edit.before || <span className="italic text-muted-foreground/50">Empty — new content</span>}
+                  {edit.before ? <Markdown>{edit.before}</Markdown> : <span className="italic text-muted-foreground/50">Empty — new content</span>}
                 </div>
               </div>
               <div>
                 <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">After</span>
                 <div className="mt-1 rounded bg-success/5 border border-success/10 p-2 text-foreground leading-relaxed min-h-[40px]">
-                  {edit.after}
+                  <Markdown>{edit.after}</Markdown>
                 </div>
               </div>
             </div>
           </motion.div>
         ))}
 
-        {edits.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground text-sm">No staged edits yet. Use the chat to make changes.</div>
+        {visibleEdits.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground text-sm">
+            {edits.length === 0
+              ? "No staged edits yet. Use the chat to make changes."
+              : "All changes have been rejected. Click \"rejected\" above to review them."}
+          </div>
         )}
       </div>
     </motion.div>

@@ -1,11 +1,19 @@
-import { BookOpen, Settings } from "lucide-react";
+import { BookOpen, LogOut } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 
 export const AppHeader = ({ activeTab, setActiveTab }: { activeTab: string; setActiveTab: (t: string) => void }) => {
+  const { profile, signOut } = useAuth();
+
   const tabs = [
     { id: "dashboard", label: "Dashboard" },
     { id: "playbook", label: "Playbook" },
     { id: "staging", label: "Review & Publish" },
+    { id: "integrations", label: "Integrations" },
   ];
+
+  const initials = profile?.full_name
+    ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : "?";
 
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
@@ -34,9 +42,19 @@ export const AppHeader = ({ activeTab, setActiveTab }: { activeTab: string; setA
         </nav>
 
         <div className="flex items-center gap-2">
+          {profile?.full_name && (
+            <span className="text-xs text-muted-foreground hidden sm:inline">{profile.full_name}</span>
+          )}
           <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-[11px] font-bold text-primary">
-            SL
+            {initials}
           </div>
+          <button
+            onClick={signOut}
+            className="w-7 h-7 rounded-full hover:bg-muted flex items-center justify-center transition-colors"
+            title="Sign out"
+          >
+            <LogOut className="w-3.5 h-3.5 text-muted-foreground" />
+          </button>
         </div>
       </div>
     </header>
