@@ -68,7 +68,7 @@ export const IntegrationsPanel = () => {
       if (provider === "notion") {
         await notionImport.mutateAsync();
       } else if (provider === "confluence") {
-        await confluenceImport.mutateAsync();
+        await confluenceImport.mutateAsync(undefined);
       }
     } catch (err) {
       setError((err as Error).message);
