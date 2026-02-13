@@ -63,5 +63,8 @@ verify_jwt = false
 [functions.notion-callback]
 verify_jwt = false
 
+[functions.import]
+verify_jwt = false
+
 [analytics]
 enabled = false
