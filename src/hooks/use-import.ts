@@ -44,9 +44,13 @@ export function useStartImport() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ provider, content }: { provider: string; content: string }) => {
+    mutationFn: async (
+      params:
+        | { provider: string; content: string }
+        | { provider: string; pdfBase64: string; mediaType: string }
+    ) => {
       const { data, error } = await supabase.functions.invoke("import", {
-        body: { provider, content },
+        body: params,
       });
 
       if (error) throw error;

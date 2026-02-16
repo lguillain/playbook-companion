@@ -1,25 +1,19 @@
-import { GlobalWorkerOptions, getDocument } from "pdfjs-dist";
-import pdfjsWorker from "pdfjs-dist/build/pdf.worker.mjs?url";
-
-GlobalWorkerOptions.workerSrc = pdfjsWorker;
-
 /**
- * Extract all text content from a PDF file.
- * Returns pages joined by double newlines.
+ * Read a file as base64-encoded string.
+ * Used to send PDFs directly to the Claude API as document content blocks.
  */
-export async function extractPdfText(file: File): Promise<string> {
-  const buffer = await file.arrayBuffer();
-  const pdf = await getDocument({ data: buffer }).promise;
-
-  const pages: string[] = [];
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    const text = content.items
-      .map((item) => ("str" in item ? item.str : ""))
-      .join(" ");
-    pages.push(text);
-  }
-
-  return pages.join("\n\n");
+export function readFileAsBase64(
+  file: File
+): Promise<{ base64: string; mediaType: string }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      // Strip the "data:<mediaType>;base64," prefix
+      const base64 = dataUrl.split(",")[1];
+      resolve({ base64, mediaType: file.type || "application/pdf" });
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 }

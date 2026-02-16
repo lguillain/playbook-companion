@@ -5,7 +5,7 @@ import { useHealthScore } from "@/hooks/use-health-score";
 import { useStartOAuth } from "@/hooks/use-connections";
 import { useStartImport, useStartNotionImport, useStartConfluenceImport } from "@/hooks/use-import";
 import { useConfluenceSpaces, useConfluencePages } from "@/hooks/use-confluence-browse";
-import { extractPdfText } from "@/lib/pdf";
+import { readFileAsBase64 } from "@/lib/pdf";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ConfluencePageSummary } from "@/lib/types";
@@ -152,10 +152,13 @@ export const OnboardingFlow = ({ onComplete }: { onComplete: () => void }) => {
     setStep("analyzing");
 
     try {
-      const text = file.name.endsWith(".pdf")
-        ? await extractPdfText(file)
-        : await file.text();
-      await startImport.mutateAsync({ provider: "pdf", content: text });
+      if (file.name.endsWith(".pdf")) {
+        const { base64, mediaType } = await readFileAsBase64(file);
+        await startImport.mutateAsync({ provider: "pdf", pdfBase64: base64, mediaType });
+      } else {
+        const text = await file.text();
+        await startImport.mutateAsync({ provider: "pdf", content: text });
+      }
       setStep("done");
     } catch (err) {
       setImportError((err as Error).message);
