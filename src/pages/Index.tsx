@@ -28,7 +28,7 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <AnimatePresence>
         {!sectionsLoading && !hasPlaybook && !dismissed && (
-          <OnboardingFlow onComplete={() => setDismissed(true)} />
+          <OnboardingFlow onComplete={() => { setDismissed(true); setActiveTab("dashboard"); }} />
         )}
       </AnimatePresence>
 

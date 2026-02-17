@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { env } from "../_shared/env.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -208,6 +209,50 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Refresh the access token using the refresh token
+      let accessToken = connection.access_token;
+      if (connection.refresh_token) {
+        const clientId = env("CONFLUENCE_CLIENT_ID");
+        const clientSecret = env("CONFLUENCE_CLIENT_SECRET");
+
+        if (clientId && clientSecret) {
+          const tokenRes = await fetch("https://auth.atlassian.com/oauth/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              grant_type: "refresh_token",
+              client_id: clientId,
+              client_secret: clientSecret,
+              refresh_token: connection.refresh_token,
+            }),
+          });
+
+          if (tokenRes.ok) {
+            const tokenData = await tokenRes.json();
+            accessToken = tokenData.access_token;
+
+            // Persist the new tokens using service role so RLS doesn't block the update
+            const serviceClient = createClient(
+              Deno.env.get("SUPABASE_URL")!,
+              Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+            );
+            await serviceClient
+              .from("connections")
+              .update({
+                access_token: tokenData.access_token,
+                refresh_token: tokenData.refresh_token ?? connection.refresh_token,
+              })
+              .eq("id", connection.id);
+          } else {
+            console.error("Token refresh failed:", await tokenRes.text());
+            return new Response(
+              JSON.stringify({ error: "Confluence session expired. Please reconnect Confluence." }),
+              { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
+      }
+
       // Publish grouped sections (by source page ID)
       const publishedPageIds = new Set<string>();
 
@@ -224,7 +269,7 @@ Deno.serve(async (req) => {
           `https://api.atlassian.com/ex/confluence/${cloudId}/wiki/api/v2/pages/${sourcePageId}`,
           {
             headers: {
-              Authorization: `Bearer ${connection.access_token}`,
+              Authorization: `Bearer ${accessToken}`,
               Accept: "application/json",
             },
           }
@@ -243,7 +288,7 @@ Deno.serve(async (req) => {
           {
             method: "PUT",
             headers: {
-              Authorization: `Bearer ${connection.access_token}`,
+              Authorization: `Bearer ${accessToken}`,
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
@@ -276,7 +321,7 @@ Deno.serve(async (req) => {
           `https://api.atlassian.com/ex/confluence/${cloudId}/wiki/rest/api/content/search?cql=${encodeURIComponent(cql)}&limit=1`,
           {
             headers: {
-              Authorization: `Bearer ${connection.access_token}`,
+              Authorization: `Bearer ${accessToken}`,
               Accept: "application/json",
             },
           }
@@ -299,7 +344,7 @@ Deno.serve(async (req) => {
           `https://api.atlassian.com/ex/confluence/${cloudId}/wiki/api/v2/pages/${existingPage.id}`,
           {
             headers: {
-              Authorization: `Bearer ${connection.access_token}`,
+              Authorization: `Bearer ${accessToken}`,
               Accept: "application/json",
             },
           }
@@ -319,7 +364,7 @@ Deno.serve(async (req) => {
           {
             method: "PUT",
             headers: {
-              Authorization: `Bearer ${connection.access_token}`,
+              Authorization: `Bearer ${accessToken}`,
               "Content-Type": "application/json",
             },
             body: JSON.stringify({

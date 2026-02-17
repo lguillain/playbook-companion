@@ -61,6 +61,9 @@ export function useChatStream() {
       abortRef.current = controller;
 
       try {
+        // Use getUser() to force a token refresh, then grab the fresh session
+        const { error: userError } = await supabase.auth.getUser();
+        if (userError) throw new Error("Not authenticated");
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) throw new Error("Not authenticated");
 

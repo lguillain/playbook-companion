@@ -243,6 +243,15 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false }: Ch
     setEditStatuses({});
   }, [conversationId]);
 
+  // Clear local messages once DB history has caught up (avoid duplicates)
+  const prevHistoryLenRef = useRef(0);
+  useEffect(() => {
+    if (history && history.length > prevHistoryLenRef.current && localMessages.length > 0 && !isStreaming) {
+      setLocalMessages([]);
+    }
+    prevHistoryLenRef.current = history?.length ?? 0;
+  }, [history, isStreaming, localMessages.length]);
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, streamingContent, stagedEdits]);
@@ -294,21 +303,18 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false }: Ch
           : undefined,
       });
 
-      // Persist edits as a local assistant message so they stay visible after stream ends
-      if (result.edits.length > 0) {
+      // Keep assistant response in local messages as fallback until DB query catches up
+      if (result.edits.length > 0 || result.content.trim()) {
         setLocalMessages((prev) => [
           ...prev,
           {
-            id: `edits-${Date.now()}`,
+            id: `assistant-${Date.now()}`,
             role: "assistant",
-            content: "",
+            content: result.content,
             timestamp: new Date().toISOString(),
-            edits: result.edits,
+            edits: result.edits.length > 0 ? result.edits : undefined,
           },
         ]);
-      } else {
-        // No edits — history query will refetch, clear locals
-        setLocalMessages([]);
       }
     } catch {
       // On error, keep local messages visible so user sees what they sent

@@ -72,5 +72,11 @@ verify_jwt = false
 [functions.chat]
 verify_jwt = false
 
+[functions.publish]
+verify_jwt = false
+
+[functions.notify]
+verify_jwt = false
+
 [analytics]
 enabled = false

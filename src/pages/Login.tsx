@@ -25,8 +25,13 @@ export default function Login() {
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
-    setSubmitting(true);
     const form = new FormData(e.currentTarget);
+    const email = form.get("email") as string;
+    if (!email.endsWith("@taskbase.com")) {
+      setError("Sign-up is restricted to Taskbase emails.");
+      return;
+    }
+    setSubmitting(true);
     const result = await signUp(
       form.get("email") as string,
       form.get("password") as string,

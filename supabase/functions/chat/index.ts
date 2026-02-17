@@ -458,9 +458,9 @@ ${playbookContext}`;
 
             // Message complete
             else if (parsed.type === "message_stop") {
-              // Persist the text portions of the response
+              // Persist the text portions of the response before closing the stream
               if (fullResponse.trim()) {
-                supabase
+                await supabase
                   .from("chat_messages")
                   .insert({
                     conversation_id: conversationId,
@@ -468,8 +468,7 @@ ${playbookContext}`;
                     content: fullResponse,
                     section_id: sectionContext?.sectionId ?? null,
                     created_by: user.id,
-                  })
-                  .then(() => {});
+                  });
               }
 
               controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
