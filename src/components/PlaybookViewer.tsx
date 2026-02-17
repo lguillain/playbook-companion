@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { usePlaybookSections, useUpdateSection } from "@/hooks/use-playbook-sections";
 import { useSkills } from "@/hooks/use-skills";
 import { useCreateStagedEdit } from "@/hooks/use-staged-edits";
+import { extractHeadings } from "@/lib/extract-headings";
 import { FileText, Clock, ChevronRight, CheckCircle2, AlertTriangle, XCircle, Pencil, X, Save, Loader2, Filter, ChevronsUpDown, Check } from "lucide-react";
 import { toast } from "sonner";
 import { ChatEditor } from "./ChatEditor";
@@ -217,56 +218,34 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookVie
       }
     }
 
-    // Apply status filter on top
+    // Apply status filter on top — check both junction-table links and title-based links
     if (statusFilter) {
       filtered = filtered.filter((section) => {
-        const skills = getSkillsForSection(section.title);
-        if (skills.length === 0) return false;
-        if (statusFilter === "outdated") return skills.some((s) => isSkillOutdated(s.lastUpdated));
-        return skills.some((s) => s.status === statusFilter);
+        const linkedSkillIds = new Set(section.skillsCovered);
+        const titleSkills = getSkillsForSection(section.title);
+        for (const s of titleSkills) linkedSkillIds.add(s.id);
+
+        const linkedSkills = allSkills.filter((s) => linkedSkillIds.has(s.id));
+        if (linkedSkills.length === 0) return false;
+        if (statusFilter === "outdated") return linkedSkills.some((s) => isSkillOutdated(s.lastUpdated));
+        return linkedSkills.some((s) => s.status === statusFilter);
       });
     }
 
     return { displaySections: filtered, filterMode: mode };
   }, [skillFilter, statusFilter, sections, allSkills, skillsFramework, getSkillsForSection]);
 
-  // Compute status counts for the pills (based on all sections, pre-status-filter)
+  // Compute status counts from all skills (consistent with dashboard)
   const statusCounts = useMemo(() => {
-    if (!sections) return { covered: 0, partial: 0, missing: 0, outdated: 0 };
-
-    // Use the skill-filtered set (but not status-filtered) as the base
-    let base = sections;
-    if (skillFilter) {
-      const targetSkill = allSkills.find((s) => s.id === skillFilter.skillId);
-      const direct = sections.filter((section) => {
-        if (section.skillsCovered.includes(skillFilter.skillId)) return true;
-        if (targetSkill?.section && targetSkill.section === section.title) return true;
-        return false;
-      });
-      if (direct.length > 0) {
-        base = direct;
-      } else {
-        const category = skillsFramework?.find((c) => c.skills.some((s) => s.id === skillFilter.skillId));
-        if (category) {
-          const siblingIds = new Set(category.skills.map((s) => s.id));
-          const byCat = sections.filter((section) =>
-            section.skillsCovered.some((sid) => siblingIds.has(sid))
-          );
-          if (byCat.length > 0) base = byCat;
-        }
-      }
-    }
-
     const counts = { covered: 0, partial: 0, missing: 0, outdated: 0 };
-    for (const section of base) {
-      const skills = getSkillsForSection(section.title);
-      if (skills.some((s) => s.status === "covered")) counts.covered++;
-      if (skills.some((s) => s.status === "partial")) counts.partial++;
-      if (skills.some((s) => s.status === "missing")) counts.missing++;
-      if (skills.some((s) => isSkillOutdated(s.lastUpdated))) counts.outdated++;
+    for (const skill of allSkills) {
+      if (skill.status === "covered") counts.covered++;
+      if (skill.status === "partial") counts.partial++;
+      if (skill.status === "missing") counts.missing++;
+      if (isSkillOutdated(skill.lastUpdated)) counts.outdated++;
     }
     return counts;
-  }, [sections, skillFilter, allSkills, skillsFramework, getSkillsForSection]);
+  }, [allSkills]);
 
   // Auto-select first section when filter changes or data loads
   useEffect(() => {
@@ -287,7 +266,50 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookVie
   const currentId = activeSection ?? displaySections[0]?.id;
   const current = displaySections.find((s) => s.id === currentId) ?? displaySections[0];
 
-  if (!current) return null;
+  if (!current) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="rounded-xl border border-border bg-card shadow-card flex flex-col h-[calc(100vh-180px)]"
+      >
+        <div className="px-5 py-3 border-b border-border">
+          <div className="flex items-center gap-6 flex-wrap">
+            <div className="flex items-center gap-3">
+              <FileText className="w-4 h-4 text-primary" />
+              <h2 className="text-sm font-semibold text-foreground">Playbook Content</h2>
+            </div>
+            <div className="h-5 w-px bg-border" />
+            <div className="flex items-center gap-2">
+              {statusPillConfig.map(({ key, icon: Icon, label, color }) => {
+                const count = statusCounts[key];
+                const active = statusFilter === key;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setStatusFilter(active ? null : key)}
+                    className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                      active
+                        ? "bg-primary/10 ring-2 ring-primary/30"
+                        : "bg-muted/50 hover:bg-muted/80"
+                    }`}
+                  >
+                    <Icon className={`w-3.5 h-3.5 ${color}`} />
+                    <span className="text-muted-foreground">{label}</span>
+                    <span className={`font-bold font-mono ${color}`}>{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
+          No sections match this filter.
+        </div>
+      </motion.div>
+    );
+  }
 
   const sectionSkills = getSkillsForSection(current.title);
 
@@ -414,27 +436,45 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookVie
               const skills = getSkillsForSection(section.title);
               const coveredCount = skills.filter((s) => s.status === "covered").length;
               const totalCount = skills.length;
+              const isActive = currentId === section.id;
+              const headings = isActive ? extractHeadings(section.content) : [];
 
               return (
-                <button
-                  key={section.id}
-                  onClick={() => { setActiveSection(section.id); setEditing(false); }}
-                  className={`w-full text-left px-4 py-2.5 flex items-start gap-2 text-xs transition-colors ${
-                    currentId === section.id
-                      ? "bg-primary/10 text-primary border-r-2 border-primary"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                  }`}
-                >
-                  <ChevronRight className={`w-3 h-3 mt-0.5 flex-shrink-0 transition-transform ${currentId === section.id ? "rotate-90" : ""}`} />
-                  <div>
-                    <span className="block">{section.title}</span>
-                    {totalCount > 0 && (
-                      <span className={`text-[10px] font-mono ${coveredCount === totalCount ? "text-success" : "text-muted-foreground"}`}>
-                        {coveredCount}/{totalCount} skills
-                      </span>
-                    )}
-                  </div>
-                </button>
+                <div key={section.id}>
+                  <button
+                    onClick={() => { setActiveSection(section.id); setEditing(false); }}
+                    className={`w-full text-left px-4 py-2.5 flex items-start gap-2 text-xs transition-colors ${
+                      isActive
+                        ? "bg-primary/10 text-primary border-r-2 border-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    }`}
+                  >
+                    <ChevronRight className={`w-3 h-3 mt-0.5 flex-shrink-0 transition-transform ${isActive ? "rotate-90" : ""}`} />
+                    <div>
+                      <span className="block">{section.title}</span>
+                      {totalCount > 0 && (
+                        <span className={`text-[10px] font-mono ${coveredCount === totalCount ? "text-success" : "text-muted-foreground"}`}>
+                          {coveredCount}/{totalCount} skills
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                  {isActive && headings.length > 0 && (
+                    <div className="pb-1">
+                      {headings.map((h) => (
+                        <button
+                          key={h.slug}
+                          onClick={() => document.getElementById(h.slug)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                          className="w-full text-left text-[11px] py-1 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors truncate"
+                          style={{ paddingLeft: `${(h.level - 1) * 12 + 16}px` }}
+                          title={h.text}
+                        >
+                          {h.text}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               );
             })}
             </div>

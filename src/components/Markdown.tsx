@@ -1,3 +1,4 @@
+import { Children, isValidElement, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -6,24 +7,57 @@ type MarkdownProps = {
   className?: string;
 };
 
+/** Extract plain text from React children so we can generate a slug. */
+function childrenToText(node: ReactNode): string {
+  if (typeof node === "string") return node;
+  if (typeof node === "number") return String(node);
+  if (!isValidElement(node)) return "";
+  return Children.toArray((node.props as { children?: ReactNode }).children)
+    .map(childrenToText)
+    .join("");
+}
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 export const Markdown = ({ children, className = "" }: MarkdownProps) => {
+  // Track slug counts for deduplication within a single render
+  const slugCounts = new Map<string, number>();
+  function uniqueSlug(text: string): string {
+    let slug = slugify(text);
+    const count = slugCounts.get(slug) ?? 0;
+    slugCounts.set(slug, count + 1);
+    if (count > 0) slug = `${slug}-${count + 1}`;
+    return slug;
+  }
+
   return (
     <div className={`text-sm leading-relaxed ${className}`}>
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       components={{
-        h1: ({ children }) => (
-          <h1 className="text-lg font-bold text-foreground mt-5 mb-2">{children}</h1>
-        ),
-        h2: ({ children }) => (
-          <h2 className="text-base font-bold text-foreground mt-4 mb-2">{children}</h2>
-        ),
-        h3: ({ children }) => (
-          <h3 className="text-sm font-semibold text-foreground mt-3 mb-1.5">{children}</h3>
-        ),
-        h4: ({ children }) => (
-          <h4 className="text-sm font-semibold text-foreground mt-2 mb-1">{children}</h4>
-        ),
+        h1: ({ children }) => {
+          const id = uniqueSlug(childrenToText(children));
+          return <h1 id={id} className="text-lg font-bold text-foreground mt-5 mb-2">{children}</h1>;
+        },
+        h2: ({ children }) => {
+          const id = uniqueSlug(childrenToText(children));
+          return <h2 id={id} className="text-base font-bold text-foreground mt-4 mb-2">{children}</h2>;
+        },
+        h3: ({ children }) => {
+          const id = uniqueSlug(childrenToText(children));
+          return <h3 id={id} className="text-sm font-semibold text-foreground mt-3 mb-1.5">{children}</h3>;
+        },
+        h4: ({ children }) => {
+          const id = uniqueSlug(childrenToText(children));
+          return <h4 id={id} className="text-sm font-semibold text-foreground mt-2 mb-1">{children}</h4>;
+        },
         p: ({ children }) => (
           <p className="text-sm text-secondary-foreground leading-relaxed mb-2">{children}</p>
         ),

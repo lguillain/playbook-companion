@@ -443,15 +443,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Build a table-of-contents summary for Claude to map skills
-    const tocSummary = parsedPages.map((p, i) => {
+    // Build full content for Claude to analyze
+    const pagesContent = parsedPages.map((p, i) => {
       const indent = "  ".repeat(p.depth);
-      return `[Page ${i + 1}] ${indent}"${p.title}"\n${p.markdown.slice(0, 800)}${p.markdown.length > 800 ? "\n..." : ""}`;
+      return `[Page ${i}] ${indent}"${p.title}"\n${p.markdown}`;
     }).join("\n\n---\n\n");
 
     const skillsBlock = getSkillsPromptBlock();
 
-    // Ask Claude only for skill mapping (lightweight — no content reproduction)
+    // Send full content to Claude for accurate skill mapping & coverage assessment
     const analysisResponse = await fetch(
       "https://api.anthropic.com/v1/messages",
       {
@@ -464,9 +464,12 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           model: "claude-sonnet-4-5-20250929",
           max_tokens: 4096,
-          system: `You are a sales playbook analyzer. Given page summaries from a playbook, you must:
+          system: `You are a sales playbook analyzer. Given the full content of playbook pages, you must:
 1. Map each page (by its index) to the relevant skills from the EXACT list below.
-2. Assess every skill's coverage: "covered" (well-documented), "partial" (mentioned but incomplete), "missing" (not found).
+2. Assess every skill's coverage based on the ACTUAL CONTENT (not just titles):
+   - "covered": the page contains substantive, actionable content for that skill (specific guidance, examples, frameworks, or detailed methodology)
+   - "partial": the page mentions the topic but lacks depth — e.g. a heading with only a few bullet points, vague guidance, or a brief mention without actionable detail
+   - "missing": no page meaningfully addresses this skill
 
 SKILLS FRAMEWORK (use ONLY these skill IDs):
 
@@ -475,7 +478,9 @@ ${skillsBlock}
 RULES:
 - Use ONLY skill IDs from the list above (e.g. "i1", "m2", "dm3"). Do not invent new IDs.
 - Every skill must appear in skillAssessments with a status.
+- Every skill that is "covered" or "partial" MUST appear in pageSkills mapped to the most relevant page. Only "missing" skills should have no page mapping.
 - Each skill should be mapped to at most ONE page (the most relevant one).
+- Be honest about coverage — a short or vague section is "partial", not "covered".
 - Return ONLY valid JSON, no other text.
 
 Return this JSON structure:
@@ -492,7 +497,7 @@ Return this JSON structure:
           messages: [
             {
               role: "user",
-              content: `Analyze these ${parsedPages.length} playbook pages from Confluence:\n\n${tocSummary}`,
+              content: `Analyze these ${parsedPages.length} playbook pages from Confluence:\n\n${pagesContent}`,
             },
           ],
         }),
@@ -551,6 +556,9 @@ Return this JSON structure:
     const fallbackDate = new Date().toISOString().split("T")[0];
 
     // Insert each page as a section, preserving tree order
+    const mappedSkillIds = new Set<string>();
+    const insertedSections: { id: string; title: string; pageIndex: number }[] = [];
+
     for (let i = 0; i < parsedPages.length; i++) {
       const page = parsedPages[i];
 
@@ -572,9 +580,11 @@ Return this JSON structure:
 
       if (!insertedSection) continue;
       const sectionId = insertedSection.id;
+      insertedSections.push({ id: sectionId, title: displayTitle, pageIndex: i });
 
       const skillIds = pageSkillMap.get(i) ?? [];
       for (const skillId of skillIds) {
+        mappedSkillIds.add(skillId);
         await adminClient
           .from("section_skills")
           .insert({ section_id: sectionId, skill_id: skillId, user_id: user.id });
@@ -597,12 +607,27 @@ Return this JSON structure:
     }
 
     // Update skill statuses from assessments
+    // Safety net: if a skill is covered/partial but wasn't mapped to a page,
+    // link it to the first section so it's discoverable in the playbook tab
     if (analysis.skillAssessments) {
       for (const assessment of analysis.skillAssessments) {
         if (!ALL_SKILL_IDS.has(assessment.id)) continue;
         const status = ["covered", "partial", "missing"].includes(assessment.status)
           ? assessment.status
           : "missing";
+
+        // Link orphaned non-missing skills to the first section
+        if (status !== "missing" && !mappedSkillIds.has(assessment.id) && insertedSections.length > 0) {
+          const fallbackSection = insertedSections[0];
+          await adminClient
+            .from("section_skills")
+            .insert({ section_id: fallbackSection.id, skill_id: assessment.id, user_id: user.id });
+          await adminClient
+            .from("user_skills")
+            .update({ section_title: fallbackSection.title })
+            .eq("user_id", user.id)
+            .eq("skill_id", assessment.id);
+        }
 
         const skillDate = skillDateMap.get(assessment.id) ?? fallbackDate;
         await adminClient

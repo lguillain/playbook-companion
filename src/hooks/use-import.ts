@@ -40,20 +40,23 @@ export function useImportStatus(importId: string | null) {
   });
 }
 
-export function useStartImport() {
+export function useStartImport(onPhaseChange?: (phase: "extracting" | "analyzing") => void) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (
-      params:
-        | { provider: string; content: string }
-        | { provider: string; pdfBase64: string; mediaType: string }
-    ) => {
+    mutationFn: async ({ provider, content, pdfBase64 }: { provider: string; content?: string; pdfBase64?: string }) => {
+      // Step 1: Import — convert to markdown and save sections
+      onPhaseChange?.("extracting");
       const { data, error } = await supabase.functions.invoke("import", {
-        body: params,
+        body: { provider, content, pdfBase64 },
       });
-
       if (error) throw error;
+
+      // Step 2: Analyze — skill mapping on saved sections
+      onPhaseChange?.("analyzing");
+      const { error: analyzeError } = await supabase.functions.invoke("analyze");
+      if (analyzeError) throw analyzeError;
+
       return data;
     },
     onSuccess: () => {

@@ -66,5 +66,11 @@ verify_jwt = false
 [functions.import]
 verify_jwt = false
 
+[functions.analyze]
+verify_jwt = false
+
+[functions.chat]
+verify_jwt = false
+
 [analytics]
 enabled = false

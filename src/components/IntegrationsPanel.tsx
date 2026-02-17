@@ -3,7 +3,7 @@ import { AlertCircle, CheckCircle2, ExternalLink, Loader2, RefreshCw, Trash2, Up
 import { useConnections, useStartOAuth } from "@/hooks/use-connections";
 import { useImports, useStartImport, useStartConfluenceImport, useStartNotionImport } from "@/hooks/use-import";
 import { usePlaybookSections, useResetPlaybook } from "@/hooks/use-playbook-sections";
-import { readFileAsBase64 } from "@/lib/pdf";
+
 import type { ConnectionRow, ImportRow } from "@/lib/types";
 
 const providerMeta: Record<string, { name: string; icon: string }> = {
@@ -50,8 +50,11 @@ export const IntegrationsPanel = () => {
     setUploading(true);
     try {
       if (file.name.endsWith(".pdf")) {
-        const { base64, mediaType } = await readFileAsBase64(file);
-        await startImport.mutateAsync({ provider: "pdf", pdfBase64: base64, mediaType });
+        const buffer = await file.arrayBuffer();
+        const base64 = btoa(
+          new Uint8Array(buffer).reduce((s, b) => s + String.fromCharCode(b), "")
+        );
+        await startImport.mutateAsync({ provider: "pdf", pdfBase64: base64 });
       } else {
         const text = await file.text();
         await startImport.mutateAsync({ provider: "pdf", content: text });

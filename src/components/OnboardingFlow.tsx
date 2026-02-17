@@ -5,7 +5,7 @@ import { useHealthScore } from "@/hooks/use-health-score";
 import { useStartOAuth } from "@/hooks/use-connections";
 import { useStartImport, useStartNotionImport, useStartConfluenceImport } from "@/hooks/use-import";
 import { useConfluenceSpaces, useConfluencePages } from "@/hooks/use-confluence-browse";
-import { readFileAsBase64 } from "@/lib/pdf";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ConfluencePageSummary } from "@/lib/types";
@@ -64,12 +64,14 @@ export const OnboardingFlow = ({ onComplete }: { onComplete: () => void }) => {
   const { data: health } = useHealthScore();
   const gapCount = health ? health.missing + health.partial : 0;
   const startOAuth = useStartOAuth();
-  const startImport = useStartImport();
-  const notionImport = useStartNotionImport();
-  const confluenceImport = useStartConfluenceImport();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState<Step>("source");
+  const [importPhase, setImportPhase] = useState<"extracting" | "analyzing">("extracting");
+
+  const startImport = useStartImport(setImportPhase);
+  const notionImport = useStartNotionImport();
+  const confluenceImport = useStartConfluenceImport();
   const [selected, setSelected] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
 
@@ -108,6 +110,7 @@ export const OnboardingFlow = ({ onComplete }: { onComplete: () => void }) => {
 
     if (connectedProvider === "notion") {
       // OAuth succeeded — kick off the Notion import automatically
+      setImportPhase("extracting");
       setStep("analyzing");
       notionImport.mutate(undefined, {
         onSuccess: () => setStep("done"),
@@ -152,9 +155,13 @@ export const OnboardingFlow = ({ onComplete }: { onComplete: () => void }) => {
     setStep("analyzing");
 
     try {
+      setImportPhase("extracting");
       if (file.name.endsWith(".pdf")) {
-        const { base64, mediaType } = await readFileAsBase64(file);
-        await startImport.mutateAsync({ provider: "pdf", pdfBase64: base64, mediaType });
+        const buffer = await file.arrayBuffer();
+        const base64 = btoa(
+          new Uint8Array(buffer).reduce((s, b) => s + String.fromCharCode(b), "")
+        );
+        await startImport.mutateAsync({ provider: "pdf", pdfBase64: base64 });
       } else {
         const text = await file.text();
         await startImport.mutateAsync({ provider: "pdf", content: text });
@@ -249,6 +256,7 @@ export const OnboardingFlow = ({ onComplete }: { onComplete: () => void }) => {
 
   const handleConfluenceImport = () => {
     setImportError(null);
+    setImportPhase("extracting");
     setStep("analyzing");
     confluenceImport.mutate([...selectedPageIds], {
       onSuccess: () => setStep("done"),
@@ -458,21 +466,31 @@ export const OnboardingFlow = ({ onComplete }: { onComplete: () => void }) => {
           {step === "analyzing" && (
             <motion.div key="analyzing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center py-8">
               <Loader2 className="w-10 h-10 text-primary mx-auto mb-4 animate-spin" />
-              <h2 className="text-xl font-bold text-foreground mb-2">Analyzing your playbook</h2>
-              <p className="text-sm text-muted-foreground">Mapping content to skills framework…</p>
+              <h2 className="text-xl font-bold text-foreground mb-2">
+                {importPhase === "extracting" ? "Extracting content" : "Analyzing your playbook"}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {importPhase === "extracting"
+                  ? "Reading and converting your document to structured content…"
+                  : "Mapping sections to skills framework…"}
+              </p>
               <div className="mt-6 space-y-2">
-                {["Importing content…", "Identifying skills coverage…", "Checking recency…"].map((text, i) => (
-                  <motion.div
-                    key={text}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.8 }}
-                    className="flex items-center gap-2 justify-center text-xs text-muted-foreground"
-                  >
+                <div className="flex items-center gap-2 justify-center text-xs text-muted-foreground">
+                  {importPhase === "extracting" ? (
+                    <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                  ) : (
                     <CheckCircle2 className="w-3 h-3 text-success" />
-                    {text}
-                  </motion.div>
-                ))}
+                  )}
+                  Extracting content
+                </div>
+                <div className="flex items-center gap-2 justify-center text-xs text-muted-foreground">
+                  {importPhase === "analyzing" ? (
+                    <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                  ) : (
+                    <span className="w-3 h-3 rounded-full border border-muted-foreground/30" />
+                  )}
+                  Mapping skills
+                </div>
               </div>
             </motion.div>
           )}
