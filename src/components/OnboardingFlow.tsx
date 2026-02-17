@@ -492,6 +492,7 @@ export const OnboardingFlow = ({ onComplete }: { onComplete: () => void }) => {
                   Mapping skills
                 </div>
               </div>
+              <p className="mt-4 text-xs text-muted-foreground">This can take up to 5 minutes</p>
             </motion.div>
           )}
 
