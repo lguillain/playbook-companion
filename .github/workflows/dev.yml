@@ -3,7 +3,7 @@ name: build for playbook
 on:
   push:
     branches:
-      - playbook
+      - main
 
 permissions:
   contents: write
