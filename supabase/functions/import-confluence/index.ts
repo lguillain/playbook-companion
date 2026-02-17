@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { env } from "../_shared/env.ts";
 import { getSkillsPromptBlock, ALL_SKILL_IDS } from "../_shared/skills.ts";
+import { splitIntoSections } from "../_shared/split-sections.ts";
 
 const ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY");
 const CONFLUENCE_CLIENT_ID = env("CONFLUENCE_CLIENT_ID");
@@ -418,20 +419,42 @@ Deno.serve(async (req) => {
     // Sort pages into tree order (parent → children, respecting position)
     const orderedPages = sortPagesAsTree(rawPages);
 
-    // Convert each page to markdown
-    type ParsedPage = { title: string; markdown: string; depth: number; lastModified: string | null };
-    const parsedPages: ParsedPage[] = [];
+    // Convert each page to markdown and split by headings into sections
+    type ParsedSection = {
+      title: string;
+      content: string;
+      sourcePageId: string;
+      lastModified: string | null;
+    };
+    const allSections: ParsedSection[] = [];
+
     for (const page of orderedPages) {
       const markdown = page.html.trim() ? htmlToMarkdown(page.html) : "";
-      parsedPages.push({
-        title: page.title,
-        markdown,
-        depth: page.depth,
-        lastModified: page.lastModified,
-      });
+      if (!markdown) continue;
+
+      const headingSections = splitIntoSections(markdown, page.title);
+
+      if (headingSections.length === 1 && headingSections[0].title === page.title) {
+        // Page had no internal headings — keep page title as-is
+        allSections.push({
+          title: page.title,
+          content: headingSections[0].content,
+          sourcePageId: page.id,
+          lastModified: page.lastModified,
+        });
+      } else {
+        for (const sec of headingSections) {
+          allSections.push({
+            title: `${page.title} > ${sec.title}`,
+            content: sec.content,
+            sourcePageId: page.id,
+            lastModified: page.lastModified,
+          });
+        }
+      }
     }
 
-    if (parsedPages.length === 0) {
+    if (allSections.length === 0) {
       await adminClient
         .from("imports")
         .update({ status: "failed", error: "All Confluence pages were empty" })
@@ -444,9 +467,8 @@ Deno.serve(async (req) => {
     }
 
     // Build full content for Claude to analyze
-    const pagesContent = parsedPages.map((p, i) => {
-      const indent = "  ".repeat(p.depth);
-      return `[Page ${i}] ${indent}"${p.title}"\n${p.markdown}`;
+    const sectionsContent = allSections.map((s, i) => {
+      return `[Section ${i}] "${s.title}"\n${s.content}`;
     }).join("\n\n---\n\n");
 
     const skillsBlock = getSkillsPromptBlock();
@@ -464,12 +486,12 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           model: "claude-sonnet-4-5-20250929",
           max_tokens: 4096,
-          system: `You are a sales playbook analyzer. Given the full content of playbook pages, you must:
-1. Map each page (by its index) to the relevant skills from the EXACT list below.
+          system: `You are a sales playbook analyzer. Given the full content of playbook sections, you must:
+1. Map each section (by its index) to the relevant skills from the EXACT list below.
 2. Assess every skill's coverage based on the ACTUAL CONTENT (not just titles):
-   - "covered": the page contains substantive, actionable content for that skill (specific guidance, examples, frameworks, or detailed methodology)
-   - "partial": the page mentions the topic but lacks depth — e.g. a heading with only a few bullet points, vague guidance, or a brief mention without actionable detail
-   - "missing": no page meaningfully addresses this skill
+   - "covered": the section contains substantive, actionable content for that skill (specific guidance, examples, frameworks, or detailed methodology)
+   - "partial": the section mentions the topic but lacks depth — e.g. a heading with only a few bullet points, vague guidance, or a brief mention without actionable detail
+   - "missing": no section meaningfully addresses this skill
 
 SKILLS FRAMEWORK (use ONLY these skill IDs):
 
@@ -478,16 +500,16 @@ ${skillsBlock}
 RULES:
 - Use ONLY skill IDs from the list above (e.g. "i1", "m2", "dm3"). Do not invent new IDs.
 - Every skill must appear in skillAssessments with a status.
-- Every skill that is "covered" or "partial" MUST appear in pageSkills mapped to the most relevant page. Only "missing" skills should have no page mapping.
-- Each skill should be mapped to at most ONE page (the most relevant one).
+- Every skill that is "covered" or "partial" MUST appear in sectionSkills mapped to the most relevant section. Only "missing" skills should have no section mapping.
+- Each skill should be mapped to at most ONE section (the most relevant one).
 - Be honest about coverage — a short or vague section is "partial", not "covered".
 - Return ONLY valid JSON, no other text.
 
 Return this JSON structure:
 {
-  "pageSkills": [
-    { "pageIndex": 0, "skillIds": ["i1", "i2"] },
-    { "pageIndex": 1, "skillIds": ["m1"] }
+  "sectionSkills": [
+    { "sectionIndex": 0, "skillIds": ["i1", "i2"] },
+    { "sectionIndex": 1, "skillIds": ["m1"] }
   ],
   "skillAssessments": [
     { "id": "i1", "status": "covered" },
@@ -497,7 +519,7 @@ Return this JSON structure:
           messages: [
             {
               role: "user",
-              content: `Analyze these ${parsedPages.length} playbook pages from Confluence:\n\n${pagesContent}`,
+              content: `Analyze these ${allSections.length} playbook sections from Confluence:\n\n${sectionsContent}`,
             },
           ],
         }),
@@ -515,7 +537,7 @@ Return this JSON structure:
     if (!jsonMatch) throw new Error("Failed to parse analysis response");
 
     let analysis: {
-      pageSkills: { pageIndex: number; skillIds: string[] }[];
+      sectionSkills: { sectionIndex: number; skillIds: string[] }[];
       skillAssessments: { id: string; status: string }[];
     };
     try {
@@ -535,10 +557,10 @@ Return this JSON structure:
       }
     }
 
-    // Build a lookup from pageIndex → skillIds
-    const pageSkillMap = new Map<number, string[]>();
-    for (const ps of analysis.pageSkills ?? []) {
-      pageSkillMap.set(ps.pageIndex, (ps.skillIds ?? []).filter((id) => ALL_SKILL_IDS.has(id)));
+    // Build a lookup from sectionIndex → skillIds
+    const sectionSkillMap = new Map<number, string[]>();
+    for (const ss of analysis.sectionSkills ?? []) {
+      sectionSkillMap.set(ss.sectionIndex, (ss.skillIds ?? []).filter((id) => ALL_SKILL_IDS.has(id)));
     }
 
     // Clear existing data for THIS USER
@@ -555,34 +577,31 @@ Return this JSON structure:
 
     const fallbackDate = new Date().toISOString().split("T")[0];
 
-    // Insert each page as a section, preserving tree order
+    // Insert each heading-level section, storing source page ID
     const mappedSkillIds = new Set<string>();
-    const insertedSections: { id: string; title: string; pageIndex: number }[] = [];
+    const insertedSections: { id: string; title: string; sectionIndex: number }[] = [];
 
-    for (let i = 0; i < parsedPages.length; i++) {
-      const page = parsedPages[i];
-
-      // Indent subpage titles to show hierarchy
-      const titlePrefix = page.depth > 0 ? "\u00A0\u00A0".repeat(page.depth) : "";
-      const displayTitle = `${titlePrefix}${page.title}`;
+    for (let i = 0; i < allSections.length; i++) {
+      const sec = allSections[i];
 
       const { data: insertedSection } = await adminClient
         .from("playbook_sections")
         .insert({
           user_id: user.id,
-          title: displayTitle,
-          content: page.markdown,
+          title: sec.title,
+          content: sec.content,
           sort_order: i + 1,
-          last_updated: page.lastModified ?? fallbackDate,
+          last_updated: sec.lastModified ?? fallbackDate,
+          source_page_id: sec.sourcePageId,
         })
         .select("id")
         .single();
 
       if (!insertedSection) continue;
       const sectionId = insertedSection.id;
-      insertedSections.push({ id: sectionId, title: displayTitle, pageIndex: i });
+      insertedSections.push({ id: sectionId, title: sec.title, sectionIndex: i });
 
-      const skillIds = pageSkillMap.get(i) ?? [];
+      const skillIds = sectionSkillMap.get(i) ?? [];
       for (const skillId of skillIds) {
         mappedSkillIds.add(skillId);
         await adminClient
@@ -591,23 +610,23 @@ Return this JSON structure:
 
         await adminClient
           .from("user_skills")
-          .update({ section_title: displayTitle })
+          .update({ section_title: sec.title })
           .eq("user_id", user.id)
           .eq("skill_id", skillId);
       }
     }
 
-    // Build a skill → source date lookup from the page-skill mapping
+    // Build a skill → source date lookup from the section-skill mapping
     const skillDateMap = new Map<string, string | null>();
-    for (const [pageIndex, skillIds] of pageSkillMap) {
-      const pageDate = parsedPages[pageIndex]?.lastModified ?? null;
+    for (const [sectionIndex, skillIds] of sectionSkillMap) {
+      const secDate = allSections[sectionIndex]?.lastModified ?? null;
       for (const skillId of skillIds) {
-        skillDateMap.set(skillId, pageDate);
+        skillDateMap.set(skillId, secDate);
       }
     }
 
     // Update skill statuses from assessments
-    // Safety net: if a skill is covered/partial but wasn't mapped to a page,
+    // Safety net: if a skill is covered/partial but wasn't mapped to a section,
     // link it to the first section so it's discoverable in the playbook tab
     if (analysis.skillAssessments) {
       for (const assessment of analysis.skillAssessments) {
@@ -650,8 +669,7 @@ Return this JSON structure:
         metadata: {
           pageIds: rawPages.map((p) => p.id),
           pages_found: rawPages.length,
-          pages_with_content: parsedPages.length,
-          sections_created: parsedPages.length,
+          sections_created: allSections.length,
         },
       })
       .eq("id", importRecord.id);
@@ -660,7 +678,7 @@ Return this JSON structure:
       JSON.stringify({
         importId: importRecord.id,
         pagesFound: rawPages.length,
-        sectionsCreated: parsedPages.length,
+        sectionsCreated: allSections.length,
         status: "completed",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

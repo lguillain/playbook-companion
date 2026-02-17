@@ -39,6 +39,7 @@ export type PlaybookSectionRow = {
   sort_order: number;
   last_updated: string;
   created_at: string;
+  source_page_id?: string;
 };
 
 export type SectionSkillRow = {

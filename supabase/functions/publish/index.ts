@@ -126,7 +126,78 @@ Deno.serve(async (req) => {
 
     // Get unique sections that have approved edits
     const sectionIds = [...new Set(approvedEdits.map((e) => e.section_id))];
+
+    // Fetch all affected sections (with source_page_id)
+    const { data: affectedSections } = await supabase
+      .from("playbook_sections")
+      .select("*")
+      .in("id", sectionIds);
+
+    if (!affectedSections || affectedSections.length === 0) {
+      return new Response(
+        JSON.stringify({ message: "No sections found for approved edits", published: 0 }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Group sections by source_page_id for reassembly.
+    // Sections without source_page_id are published individually (legacy/PDF imports).
+    type SectionRow = typeof affectedSections[number];
+    const bySourcePage = new Map<string, SectionRow[]>();
+    const standalonesSections: SectionRow[] = [];
+
+    for (const sec of affectedSections) {
+      if (sec.source_page_id) {
+        const group = bySourcePage.get(sec.source_page_id) ?? [];
+        group.push(sec);
+        bySourcePage.set(sec.source_page_id, group);
+      } else {
+        standalonesSections.push(sec);
+      }
+    }
+
+    // For grouped sections, we need ALL sibling sections (not just edited ones)
+    // so we can reassemble the full page content.
+    const sourcePageIds = [...bySourcePage.keys()];
+    let allSiblings: SectionRow[] = [];
+    if (sourcePageIds.length > 0) {
+      const { data: siblings } = await supabase
+        .from("playbook_sections")
+        .select("*")
+        .in("source_page_id", sourcePageIds)
+        .order("sort_order", { ascending: true });
+      allSiblings = siblings ?? [];
+    }
+
+    // Group ALL siblings by source_page_id
+    const allSiblingsByPage = new Map<string, SectionRow[]>();
+    for (const sec of allSiblings) {
+      const group = allSiblingsByPage.get(sec.source_page_id!) ?? [];
+      group.push(sec);
+      allSiblingsByPage.set(sec.source_page_id!, group);
+    }
+
     const errors: string[] = [];
+
+    /** Extract the heading portion from a "PageTitle > HeadingText" title. */
+    function extractHeading(sectionTitle: string): string | null {
+      const idx = sectionTitle.indexOf(" > ");
+      return idx >= 0 ? sectionTitle.substring(idx + 3) : null;
+    }
+
+    /** Reassemble all sibling sections of a source page into one markdown document. */
+    function reassemblePageMarkdown(sections: SectionRow[]): string {
+      return sections
+        .map((s) => {
+          const heading = extractHeading(s.title);
+          if (heading) {
+            return `# ${heading}\n\n${s.content}`;
+          }
+          // No " > " in title means it was a page with no internal headings
+          return s.content;
+        })
+        .join("\n\n");
+    }
 
     if (provider === "confluence") {
       const cloudId = connection.workspace_id;
@@ -137,16 +208,69 @@ Deno.serve(async (req) => {
         );
       }
 
-      for (const sectionId of sectionIds) {
-        const { data: section } = await supabase
-          .from("playbook_sections")
-          .select("*")
-          .eq("id", sectionId)
-          .single();
+      // Publish grouped sections (by source page ID)
+      const publishedPageIds = new Set<string>();
 
-        if (!section) continue;
+      for (const [sourcePageId, _editedSections] of bySourcePage) {
+        if (publishedPageIds.has(sourcePageId)) continue;
+        publishedPageIds.add(sourcePageId);
 
-        // Search for existing Confluence page by title using CQL
+        const siblings = allSiblingsByPage.get(sourcePageId) ?? _editedSections;
+        const reassembled = reassemblePageMarkdown(siblings);
+        const storageContent = markdownToStorage(reassembled);
+
+        // Get current page version (needed for update)
+        const pageRes = await fetch(
+          `https://api.atlassian.com/ex/confluence/${cloudId}/wiki/api/v2/pages/${sourcePageId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${connection.access_token}`,
+              Accept: "application/json",
+            },
+          }
+        );
+
+        if (!pageRes.ok) {
+          errors.push(`Failed to fetch Confluence page ${sourcePageId}`);
+          continue;
+        }
+
+        const pageData = await pageRes.json();
+        const currentVersion = pageData.version?.number ?? 1;
+
+        const updateRes = await fetch(
+          `https://api.atlassian.com/ex/confluence/${cloudId}/wiki/api/v2/pages/${sourcePageId}`,
+          {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${connection.access_token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              id: sourcePageId,
+              status: "current",
+              title: pageData.title,
+              body: {
+                representation: "storage",
+                value: storageContent,
+              },
+              version: {
+                number: currentVersion + 1,
+                message: "Updated via Playbook Companion",
+              },
+            }),
+          }
+        );
+
+        if (!updateRes.ok) {
+          const errText = await updateRes.text();
+          console.error(`Failed to update Confluence page ${sourcePageId}:`, errText);
+          errors.push(`Update failed for page ${sourcePageId}`);
+        }
+      }
+
+      // Publish standalone sections (no source_page_id — fallback to title search)
+      for (const section of standalonesSections) {
         const cql = `title = "${section.title.trim()}" and type = page`;
         const searchRes = await fetch(
           `https://api.atlassian.com/ex/confluence/${cloudId}/wiki/rest/api/content/search?cql=${encodeURIComponent(cql)}&limit=1`,
@@ -159,8 +283,6 @@ Deno.serve(async (req) => {
         );
 
         if (!searchRes.ok) {
-          const errText = await searchRes.text();
-          console.error(`Confluence search failed for "${section.title}":`, errText);
           errors.push(`Search failed for "${section.title}"`);
           continue;
         }
@@ -169,12 +291,10 @@ Deno.serve(async (req) => {
         const existingPage = searchData.results?.[0];
 
         if (!existingPage) {
-          console.log(`No Confluence page found matching "${section.title}", skipping`);
           errors.push(`No page found for "${section.title}"`);
           continue;
         }
 
-        // Get current page version (needed for update)
         const pageRes = await fetch(
           `https://api.atlassian.com/ex/confluence/${cloudId}/wiki/api/v2/pages/${existingPage.id}`,
           {
@@ -192,11 +312,8 @@ Deno.serve(async (req) => {
 
         const pageData = await pageRes.json();
         const currentVersion = pageData.version?.number ?? 1;
-
-        // Convert markdown content to Confluence storage format
         const storageContent = markdownToStorage(section.content);
 
-        // Update the page
         const updateRes = await fetch(
           `https://api.atlassian.com/ex/confluence/${cloudId}/wiki/api/v2/pages/${existingPage.id}`,
           {
@@ -228,16 +345,51 @@ Deno.serve(async (req) => {
         }
       }
     } else if (provider === "notion") {
-      for (const sectionId of sectionIds) {
-        const { data: section } = await supabase
-          .from("playbook_sections")
-          .select("*")
-          .eq("id", sectionId)
-          .single();
+      // Publish grouped sections (by source page ID)
+      const publishedPageIds = new Set<string>();
 
-        if (!section) continue;
+      for (const [sourcePageId, _editedSections] of bySourcePage) {
+        if (publishedPageIds.has(sourcePageId)) continue;
+        publishedPageIds.add(sourcePageId);
 
-        // Search for existing Notion page by title
+        const siblings = allSiblingsByPage.get(sourcePageId) ?? _editedSections;
+        const reassembled = reassemblePageMarkdown(siblings);
+
+        const updateRes = await fetch(
+          `https://api.notion.com/v1/blocks/${sourcePageId}/children`,
+          {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${connection.access_token}`,
+              "Content-Type": "application/json",
+              "Notion-Version": "2022-06-28",
+            },
+            body: JSON.stringify({
+              children: [
+                {
+                  object: "block",
+                  type: "paragraph",
+                  paragraph: {
+                    rich_text: [
+                      {
+                        type: "text",
+                        text: { content: `[Updated ${new Date().toISOString().split("T")[0]}]\n${reassembled.substring(0, 2000)}` },
+                      },
+                    ],
+                  },
+                },
+              ],
+            }),
+          }
+        );
+
+        if (!updateRes.ok) {
+          errors.push(`Update failed for Notion page ${sourcePageId}`);
+        }
+      }
+
+      // Publish standalone sections (no source_page_id — fallback to title search)
+      for (const section of standalonesSections) {
         const searchRes = await fetch(
           `https://api.notion.com/v1/search`,
           {
@@ -312,7 +464,7 @@ Deno.serve(async (req) => {
         .in("id", publishedEditIds);
     }
 
-    const publishedCount = sectionIds.length - errors.length;
+    const publishedCount = (bySourcePage.size + standalonesSections.length) - errors.length;
 
     if (publishedCount === 0) {
       return new Response(

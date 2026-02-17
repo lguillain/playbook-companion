@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { splitIntoSections } from "../_shared/split-sections.ts";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 
@@ -7,33 +8,6 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-/** Split markdown into sections by # headings. */
-function splitIntoSections(markdown: string): { title: string; content: string }[] {
-  const sections: { title: string; content: string }[] = [];
-  let currentTitle = "";
-  let currentLines: string[] = [];
-
-  for (const line of markdown.split("\n")) {
-    const headingMatch = line.match(/^# (.+)/);
-    if (headingMatch) {
-      if (currentTitle) {
-        sections.push({ title: currentTitle, content: currentLines.join("\n").trim() });
-      }
-      currentTitle = headingMatch[1].trim();
-      currentLines = [];
-    } else {
-      currentLines.push(line);
-    }
-  }
-  if (currentTitle) {
-    sections.push({ title: currentTitle, content: currentLines.join("\n").trim() });
-  }
-  if (sections.length === 0) {
-    sections.push({ title: "Playbook", content: markdown.trim() });
-  }
-  return sections;
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {

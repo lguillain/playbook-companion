@@ -166,7 +166,7 @@ export const OnboardingFlow = ({ onComplete }: { onComplete: () => void }) => {
         const text = await file.text();
         await startImport.mutateAsync({ provider: "pdf", content: text });
       }
-      setStep("done");
+      onComplete();
     } catch (err) {
       setImportError((err as Error).message);
       setStep("source");
