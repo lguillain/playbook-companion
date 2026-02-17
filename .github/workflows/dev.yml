@@ -25,7 +25,7 @@ jobs:
         run: npm install
 
       - name: Build
-        run: npm run build
+        run: npm run build && touch dist/.nojekyll
         env:
           VITE_SUPABASE_URL: ${{ vars.DEV_VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.DEV_VITE_SUPABASE_ANON_KEY }}
@@ -35,4 +35,3 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
-          publish_branch: playbook
