@@ -15,17 +15,43 @@ Deno.serve(async (req) => {
     return Response.redirect(`${SITE_URL}?error=no_code`, 302);
   }
 
-  // Decode user ID from state parameter
+  // Decode and validate state parameter (CSRF protection)
   let userId: string | null = null;
+  let nonce: string | null = null;
   const stateParam = url.searchParams.get("state");
   if (stateParam) {
     try {
       const decoded = JSON.parse(atob(decodeURIComponent(stateParam)));
       userId = decoded.userId || null;
+      nonce = decoded.nonce || null;
     } catch {
       console.error("Failed to decode state parameter");
     }
   }
+
+  if (!userId || !nonce) {
+    return Response.redirect(`${SITE_URL}?error=invalid_state`, 302);
+  }
+
+  // Validate nonce against DB
+  const nonceClient = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+  const { data: nonceRow } = await nonceClient
+    .from("oauth_nonces")
+    .select("id")
+    .eq("nonce", nonce)
+    .eq("user_id", userId)
+    .eq("provider", "notion")
+    .single();
+
+  if (!nonceRow) {
+    return Response.redirect(`${SITE_URL}?error=invalid_state`, 302);
+  }
+
+  // Delete the nonce so it can't be reused
+  await nonceClient.from("oauth_nonces").delete().eq("id", nonceRow.id);
 
   try {
     const redirectUri = `${PUBLIC_SUPABASE_URL}/functions/v1/notion-callback`;

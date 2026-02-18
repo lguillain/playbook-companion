@@ -29,19 +29,39 @@ Deno.serve(async (req) => {
   if (action === "connect") {
     // Authenticate caller to get user ID for state parameter
     const authHeader = req.headers.get("Authorization");
-    let userId = "";
-    if (authHeader) {
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_ANON_KEY")!,
-        { global: { headers: { Authorization: authHeader } } }
-      );
-      const { data: { user } } = await supabase.auth.getUser();
-      userId = user?.id ?? "";
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const userId = user.id;
+
     const redirectUri = `${PUBLIC_SUPABASE_URL}/functions/v1/notion-callback`;
-    const state = encodeURIComponent(btoa(JSON.stringify({ userId, nonce: crypto.randomUUID() })));
+    // Store nonce in DB for CSRF validation on callback
+    const nonce = crypto.randomUUID();
+    const adminClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    await adminClient.from("oauth_nonces").insert({ nonce, user_id: userId, provider: "notion" });
+
+    const state = encodeURIComponent(btoa(JSON.stringify({ userId, nonce })));
     const notionAuthUrl = `https://api.notion.com/v1/oauth/authorize?client_id=${NOTION_CLIENT_ID}&response_type=code&owner=user&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
 
     return new Response(JSON.stringify({ url: notionAuthUrl }), {

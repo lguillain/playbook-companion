@@ -1,8 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { analyzeSections } from "../_shared/analyze-sections.ts";
-
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+import { env } from "../_shared/env.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -62,11 +61,14 @@ Deno.serve(async (req) => {
       );
     }
 
+    const apiKey = env("ANTHROPIC_API_KEY");
+    if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
+
     const result = await analyzeSections(
       sections,
       adminClient,
       user.id,
-      ANTHROPIC_API_KEY!,
+      apiKey,
     );
 
     return new Response(

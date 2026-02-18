@@ -52,6 +52,10 @@ export function useStartImport(onPhaseChange?: (phase: "extracting" | "analyzing
       });
       if (error) throw error;
 
+      // Sections are now in the DB — make them visible immediately
+      await queryClient.invalidateQueries({ queryKey: ["playbook-sections"] });
+      await queryClient.invalidateQueries({ queryKey: ["imports"] });
+
       // Step 2: Analyze — skill mapping on saved sections
       onPhaseChange?.("analyzing");
       const { error: analyzeError } = await supabase.functions.invoke("analyze");
@@ -63,6 +67,7 @@ export function useStartImport(onPhaseChange?: (phase: "extracting" | "analyzing
       queryClient.invalidateQueries({ queryKey: ["imports"] });
       queryClient.invalidateQueries({ queryKey: ["playbook-sections"] });
       queryClient.invalidateQueries({ queryKey: ["skills"] });
+      queryClient.invalidateQueries({ queryKey: ["health-score"] });
     },
   });
 }

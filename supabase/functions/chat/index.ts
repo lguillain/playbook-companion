@@ -1,7 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient, SupabaseClient } from "jsr:@supabase/supabase-js@2";
-
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+import { env } from "../_shared/env.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -97,6 +96,10 @@ async function executeTool(
   | { ok: true; edit: Record<string, unknown> }
   | { ok: false; error: string }
 > {
+  if (!toolUse.input) {
+    return { ok: false, error: "Empty tool input" };
+  }
+
   let input: Record<string, string>;
   try {
     input = JSON.parse(toolUse.input);
@@ -235,6 +238,58 @@ async function executeTool(
   return { ok: false, error: `Unknown tool: ${toolUse.name}` };
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────
+
+/** Parse SSE lines from a chunk, buffering partial lines across calls. */
+function parseSSELines(chunk: string, buffer: string): { lines: string[]; remaining: string } {
+  const combined = buffer + chunk;
+  const parts = combined.split("\n");
+  const remaining = parts.pop() ?? "";
+  return { lines: parts, remaining };
+}
+
+/** Call Claude API (non-streaming) to get a follow-up response after tool use. */
+async function callClaude(
+  apiKey: string,
+  systemPrompt: string,
+  messages: { role: string; content: unknown }[],
+): Promise<{ text: string; toolUse: { id: string; name: string; input: string } | null }> {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-5-20250929",
+      max_tokens: 4096,
+      system: systemPrompt,
+      messages,
+      tools,
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Anthropic API error: ${response.status} ${err}`);
+  }
+
+  const data = await response.json();
+  let text = "";
+  let toolUse: { id: string; name: string; input: string } | null = null;
+
+  for (const block of data.content) {
+    if (block.type === "text") {
+      text += block.text;
+    } else if (block.type === "tool_use") {
+      toolUse = { id: block.id, name: block.name, input: JSON.stringify(block.input) };
+    }
+  }
+
+  return { text, toolUse };
+}
+
 // ── Main handler ──────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
@@ -243,6 +298,11 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) {
+      throw new Error("ANTHROPIC_API_KEY not configured");
+    }
+
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Missing authorization" }), {
@@ -266,6 +326,20 @@ Deno.serve(async (req) => {
     }
 
     const { message, conversationId, sectionContext } = await req.json();
+
+    if (!message || typeof message !== "string") {
+      return new Response(JSON.stringify({ error: "Message is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!conversationId || typeof conversationId !== "string") {
+      return new Response(JSON.stringify({ error: "conversationId is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Persist user message
     await supabase.from("chat_messages").insert({
@@ -341,7 +415,7 @@ ${playbookContext}`;
       .order("created_at", { ascending: true })
       .limit(20);
 
-    const messages = (history ?? []).map((m: { role: string; content: string }) => ({
+    const messages: { role: string; content: unknown }[] = (history ?? []).map((m: { role: string; content: string }) => ({
       role: m.role,
       content: m.content,
     }));
@@ -352,7 +426,7 @@ ${playbookContext}`;
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY!,
+        "x-api-key": ANTHROPIC_API_KEY,
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
@@ -377,11 +451,13 @@ ${playbookContext}`;
     let fullResponse = "";
     let currentToolUse: { id: string; name: string; input: string } | null =
       null;
+    let sseBuffer = "";
 
     const transformStream = new TransformStream({
       async transform(chunk, controller) {
         const text = decoder.decode(chunk, { stream: true });
-        const lines = text.split("\n");
+        const { lines, remaining } = parseSSELines(text, sseBuffer);
+        sseBuffer = remaining;
 
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
@@ -431,7 +507,7 @@ ${playbookContext}`;
               }
             }
 
-            // Tool use complete — execute
+            // Tool use complete — execute and send tool_result back to Claude
             else if (parsed.type === "content_block_stop" && currentToolUse) {
               const result = await executeTool(
                 currentToolUse,
@@ -453,7 +529,45 @@ ${playbookContext}`;
                 );
               }
 
+              // Build the tool_result and send a follow-up request to Claude
+              // so it can acknowledge the tool use to the user.
+              const toolResultContent = result.ok
+                ? `Tool executed successfully. Staged edit created for section "${(result.edit as Record<string, unknown>).sectionTitle}".`
+                : `Tool failed: ${result.error}`;
+
+              const followUpMessages = [
+                ...messages,
+                {
+                  role: "assistant",
+                  content: [
+                    ...(fullResponse ? [{ type: "text", text: fullResponse }] : []),
+                    { type: "tool_use", id: currentToolUse.id, name: currentToolUse.name, input: JSON.parse(currentToolUse.input || "{}") },
+                  ],
+                },
+                {
+                  role: "user",
+                  content: [
+                    { type: "tool_result", tool_use_id: currentToolUse.id, content: toolResultContent },
+                  ],
+                },
+              ];
+
               currentToolUse = null;
+
+              try {
+                const followUp = await callClaude(ANTHROPIC_API_KEY, systemPrompt, followUpMessages);
+
+                if (followUp.text) {
+                  fullResponse += followUp.text;
+                  controller.enqueue(
+                    encoder.encode(
+                      `data: ${JSON.stringify({ type: "text", text: followUp.text })}\n\n`
+                    )
+                  );
+                }
+              } catch (e) {
+                console.error("Follow-up Claude call failed:", e);
+              }
             }
 
             // Message complete
@@ -473,8 +587,11 @@ ${playbookContext}`;
 
               controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
             }
-          } catch {
-            // Skip unparseable lines
+          } catch (e) {
+            // Log parse errors for debugging but don't crash the stream
+            if (data.trim()) {
+              console.error("SSE parse error:", e);
+            }
           }
         }
       },

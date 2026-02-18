@@ -3,7 +3,7 @@ import { useHealthScore } from "@/hooks/use-health-score";
 import { XCircle, AlertTriangle, Clock, CheckCircle2, Loader2 } from "lucide-react";
 
 export const HealthScore = ({ activeFilter, onFilterChange }: { activeFilter: string | null; onFilterChange: (filter: string) => void }) => {
-  const { data: health, isLoading } = useHealthScore();
+  const { data: health, isLoading, isRefetching } = useHealthScore();
 
   if (isLoading || !health) {
     return (
@@ -26,6 +26,7 @@ export const HealthScore = ({ activeFilter, onFilterChange }: { activeFilter: st
           <span className="text-sm font-semibold text-foreground">Playbook Health</span>
           <span className={`text-xl font-bold font-mono ${healthColor}`}>{health.score}</span>
           <span className="text-xs text-muted-foreground">/ 100</span>
+          {isRefetching && <Loader2 className="w-3 h-3 text-muted-foreground animate-spin" />}
         </div>
 
         <div className="h-5 w-px bg-border" />

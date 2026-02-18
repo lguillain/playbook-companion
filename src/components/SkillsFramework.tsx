@@ -15,7 +15,7 @@ const isSkillOutdated = (lastUpdated?: string) => {
 };
 
 export const SkillsFramework = ({ onFillGap, statusFilter }: { onFillGap?: (skillId: string, skillName: string) => void; statusFilter?: string | null }) => {
-  const { data: skillsFramework, isLoading } = useSkills();
+  const { data: skillsFramework, isLoading, isRefetching } = useSkills();
   const toggleFulfilled = useToggleSkillFulfilled();
 
   if (isLoading || !skillsFramework) {
@@ -35,7 +35,10 @@ export const SkillsFramework = ({ onFillGap, statusFilter }: { onFillGap?: (skil
     >
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">Skills Framework</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-foreground">Skills Framework</h2>
+            {isRefetching && <Loader2 className="w-3.5 h-3.5 text-muted-foreground animate-spin" />}
+          </div>
           <p className="text-sm text-muted-foreground mt-1">Coverage across sales competencies</p>
         </div>
       </div>

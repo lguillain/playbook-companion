@@ -105,3 +105,62 @@ export function useRejectEdit() {
     },
   });
 }
+
+export function useUnapproveEdit() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (editId: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const { error } = await supabase.rpc("unapprove_staged_edit", {
+        edit_id: editId,
+        reviewer_id: user?.id ?? null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["staged-edits"] });
+      queryClient.invalidateQueries({ queryKey: ["playbook-sections"] });
+    },
+  });
+}
+
+export function useUnrejectEdit() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (editId: string) => {
+      const { error } = await supabase
+        .from("staged_edits")
+        .update({
+          status: "pending",
+          reviewed_by: null,
+          reviewed_at: null,
+        })
+        .eq("id", editId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["staged-edits"] });
+    },
+  });
+}
+
+export function useUpdateEditText() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ editId, afterText }: { editId: string; afterText: string }) => {
+      const { error } = await supabase
+        .from("staged_edits")
+        .update({ after_text: afterText })
+        .eq("id", editId)
+        .eq("status", "pending");
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["staged-edits"] });
+    },
+  });
+}

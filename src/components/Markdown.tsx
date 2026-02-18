@@ -110,11 +110,14 @@ export const Markdown = ({ children, className = "" }: MarkdownProps) => {
           <td className="px-3 py-2 text-secondary-foreground">{children}</td>
         ),
         hr: () => <hr className="border-border my-4" />,
-        a: ({ href, children }) => (
-          <a href={href} className="text-primary underline" target="_blank" rel="noopener noreferrer">
-            {children}
-          </a>
-        ),
+        a: ({ href, children }) => {
+          const safeHref = href && /^javascript:/i.test(href) ? undefined : href;
+          return (
+            <a href={safeHref} className="text-primary underline" target="_blank" rel="noopener noreferrer">
+              {children}
+            </a>
+          );
+        },
       }}
     >
       {children}

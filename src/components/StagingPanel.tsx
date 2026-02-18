@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { useStagedEdits, useApproveEdit, useRejectEdit } from "@/hooks/use-staged-edits";
+import { useStagedEdits, useApproveEdit, useRejectEdit, useUnapproveEdit, useUnrejectEdit, useUpdateEditText } from "@/hooks/use-staged-edits";
 import { usePublish, useNotify } from "@/hooks/use-publish";
 import { useConnections } from "@/hooks/use-connections";
-import { GitBranch, Check, X, Send, Bell, MessageSquare, Edit3, Loader2, Eye, EyeOff } from "lucide-react";
+import { GitBranch, Check, X, Send, Bell, MessageSquare, Edit3, Loader2, Eye, EyeOff, Pencil, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { DiffView } from "./DiffView";
 
@@ -17,9 +17,14 @@ export const StagingPanel = () => {
   const { data: connections } = useConnections();
   const approveEdit = useApproveEdit();
   const rejectEdit = useRejectEdit();
+  const unapproveEdit = useUnapproveEdit();
+  const unrejectEdit = useUnrejectEdit();
+  const updateEditText = useUpdateEditText();
   const publish = usePublish();
   const notify = useNotify();
   const [showRejected, setShowRejected] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
 
   // Determine which provider to publish to based on connected integrations
   const connectedProvider = connections?.find((c) => c.provider === "confluence" || c.provider === "notion")?.provider ?? null;
@@ -120,7 +125,7 @@ export const StagingPanel = () => {
         {visibleEdits.map((edit) => (
           <motion.div
             key={edit.id}
-            layout
+            layout="position"
             className={`rounded-lg border p-4 transition-colors ${
               edit.status === "approved"
                 ? "border-success/30 bg-success/5"
@@ -164,6 +169,16 @@ export const StagingPanel = () => {
               {edit.status === "pending" && (
                 <div className="flex gap-1">
                   <button
+                    onClick={() => {
+                      setEditingId(edit.id);
+                      setEditDraft(edit.after);
+                    }}
+                    className="w-6 h-6 rounded bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
+                    title="Edit suggestion"
+                  >
+                    <Pencil className="w-3 h-3 text-muted-foreground" />
+                  </button>
+                  <button
                     onClick={() => approveEdit.mutate(edit.id)}
                     disabled={approveEdit.isPending}
                     className="w-6 h-6 rounded bg-success/15 flex items-center justify-center hover:bg-success/25 transition-colors"
@@ -179,9 +194,66 @@ export const StagingPanel = () => {
                   </button>
                 </div>
               )}
+              {edit.status === "approved" && (
+                <button
+                  onClick={() => unapproveEdit.mutate(edit.id)}
+                  disabled={unapproveEdit.isPending}
+                  className="flex items-center gap-1 rounded bg-muted px-2 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Undo
+                </button>
+              )}
+              {edit.status === "rejected" && (
+                <button
+                  onClick={() => unrejectEdit.mutate(edit.id)}
+                  disabled={unrejectEdit.isPending}
+                  className="flex items-center gap-1 rounded bg-muted px-2 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Undo
+                </button>
+              )}
             </div>
 
-            <DiffView before={edit.before} after={edit.after} fullSize />
+            {editingId === edit.id ? (
+              <div className="space-y-2">
+                {edit.before && (
+                  <div className="rounded border border-border bg-muted/50 p-3">
+                    <div className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Before (read-only)</div>
+                    <pre className="text-xs text-muted-foreground whitespace-pre-wrap">{edit.before}</pre>
+                  </div>
+                )}
+                <textarea
+                  value={editDraft}
+                  onChange={(e) => setEditDraft(e.target.value)}
+                  rows={Math.max(3, editDraft.split("\n").length)}
+                  className="w-full rounded border border-border bg-background p-3 text-xs text-foreground font-mono resize-y focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                <div className="flex gap-2 justify-end">
+                  <button
+                    onClick={() => setEditingId(null)}
+                    className="rounded px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    disabled={!editDraft.trim() || editDraft === edit.after || updateEditText.isPending}
+                    onClick={() => {
+                      updateEditText.mutate(
+                        { editId: edit.id, afterText: editDraft },
+                        { onSuccess: () => setEditingId(null) },
+                      );
+                    }}
+                    className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-30 transition-opacity"
+                  >
+                    {updateEditText.isPending ? "Saving..." : "Save"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <DiffView before={edit.before} after={edit.after} fullSize />
+            )}
           </motion.div>
         ))}
 

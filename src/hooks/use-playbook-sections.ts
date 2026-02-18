@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import type { PlaybookSection } from "@/lib/types";
 
 export function usePlaybookSections() {
-  return useQuery<PlaybookSection[]>({
+  const query = useQuery<PlaybookSection[]>({
     queryKey: ["playbook-sections"],
     queryFn: async () => {
       const { data: sections, error: secError } = await supabase
@@ -31,6 +31,7 @@ export function usePlaybookSections() {
       }));
     },
   });
+  return { ...query, isRefetching: query.isFetching && !query.isLoading };
 }
 
 export function useResetPlaybook() {
@@ -40,17 +41,28 @@ export function useResetPlaybook() {
     mutationFn: async () => {
       // Order matters: delete junctions first due to foreign keys
       // RLS scopes all deletes to the current user automatically
-      await supabase.from("section_skills").delete().neq("skill_id", "");
-      await supabase.from("staged_edits").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("chat_messages").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("playbook_sections").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("imports").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("connections").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      const ops = [
+        supabase.from("section_skills").delete().neq("skill_id", ""),
+        supabase.from("staged_edits").delete().neq("id", "00000000-0000-0000-0000-000000000000"),
+        supabase.from("chat_messages").delete().neq("id", "00000000-0000-0000-0000-000000000000"),
+      ];
+      for (const op of ops) {
+        const { error } = await op;
+        if (error) throw error;
+      }
+      // These can run after junctions are cleared
+      const { error: secError } = await supabase.from("playbook_sections").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      if (secError) throw secError;
+      const { error: impError } = await supabase.from("imports").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      if (impError) throw impError;
+      const { error: connError } = await supabase.from("connections").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      if (connError) throw connError;
       // Reset all user_skills to missing (RLS scopes to current user)
-      await supabase
+      const { error: skillError } = await supabase
         .from("user_skills")
         .update({ status: "missing", last_updated: null, section_title: null, coverage_note: null })
         .neq("skill_id", "");
+      if (skillError) throw skillError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["playbook-sections"] });

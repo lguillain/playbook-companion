@@ -316,7 +316,8 @@ Deno.serve(async (req) => {
 
       // Publish standalone sections (no source_page_id — fallback to title search)
       for (const section of standalonesSections) {
-        const cql = `title = "${section.title.trim()}" and type = page`;
+        const escapedTitle = section.title.trim().replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+        const cql = `title = "${escapedTitle}" and type = page`;
         const searchRes = await fetch(
           `https://api.atlassian.com/ex/confluence/${cloudId}/wiki/rest/api/content/search?cql=${encodeURIComponent(cql)}&limit=1`,
           {
@@ -390,6 +391,8 @@ Deno.serve(async (req) => {
         }
       }
     } else if (provider === "notion") {
+      const notionToken = connection.access_token;
+
       // Publish grouped sections (by source page ID)
       const publishedPageIds = new Set<string>();
 
@@ -405,7 +408,7 @@ Deno.serve(async (req) => {
           {
             method: "PATCH",
             headers: {
-              Authorization: `Bearer ${connection.access_token}`,
+              Authorization: `Bearer ${notionToken}`,
               "Content-Type": "application/json",
               "Notion-Version": "2022-06-28",
             },
@@ -440,7 +443,7 @@ Deno.serve(async (req) => {
           {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${connection.access_token}`,
+              Authorization: `Bearer ${notionToken}`,
               "Content-Type": "application/json",
               "Notion-Version": "2022-06-28",
             },
@@ -460,7 +463,7 @@ Deno.serve(async (req) => {
             {
               method: "PATCH",
               headers: {
-                Authorization: `Bearer ${connection.access_token}`,
+                Authorization: `Bearer ${notionToken}`,
                 "Content-Type": "application/json",
                 "Notion-Version": "2022-06-28",
               },

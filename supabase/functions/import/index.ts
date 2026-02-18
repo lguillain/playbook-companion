@@ -1,8 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { splitIntoSections } from "../_shared/split-sections.ts";
-
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+import { env } from "../_shared/env.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,6 +12,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+
+  let importRecordId: string | null = null;
 
   try {
     const authHeader = req.headers.get("Authorization");
@@ -39,6 +40,15 @@ Deno.serve(async (req) => {
 
     const { provider, content, pdfBase64 } = await req.json();
 
+    if (!content && !pdfBase64) {
+      return new Response(
+        JSON.stringify({ error: "Either content or pdfBase64 must be provided" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY");
+
     // Create import record
     const { data: importRecord, error: importError } = await supabase
       .from("imports")
@@ -51,6 +61,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (importError) throw importError;
+    importRecordId = importRecord.id;
 
     // ── Step 1: Convert to markdown ──────────────────────────────────
 
@@ -62,7 +73,7 @@ Deno.serve(async (req) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": ANTHROPIC_API_KEY!,
+          "x-api-key": ANTHROPIC_API_KEY ?? "",
           "anthropic-version": "2023-06-01",
         },
         body: JSON.stringify({
@@ -108,7 +119,7 @@ RULES:
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": ANTHROPIC_API_KEY!,
+          "x-api-key": ANTHROPIC_API_KEY ?? "",
           "anthropic-version": "2023-06-01",
         },
         body: JSON.stringify({
@@ -195,6 +206,23 @@ RULES:
     );
   } catch (error) {
     console.error("Import error:", error);
+
+    // Update import record to failed so it doesn't stay stuck in "processing"
+    if (importRecordId) {
+      try {
+        const adminClient = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+        );
+        await adminClient
+          .from("imports")
+          .update({ status: "failed", completed_at: new Date().toISOString() })
+          .eq("id", importRecordId);
+      } catch {
+        // Best-effort cleanup
+      }
+    }
+
     return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

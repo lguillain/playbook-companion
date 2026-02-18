@@ -8,7 +8,7 @@ export function useConnections() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("connections")
-        .select("*")
+        .select("id, provider, workspace_id, connected_by, created_at")
         .order("created_at", { ascending: false });
 
       if (error) throw error;

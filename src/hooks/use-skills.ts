@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import type { SkillCategory, Skill } from "@/lib/types";
 
 export function useSkills() {
-  return useQuery<SkillCategory[]>({
+  const query = useQuery<SkillCategory[]>({
     queryKey: ["skills"],
     queryFn: async () => {
       const [catResult, skillResult, userSkillResult] = await Promise.all([
@@ -42,6 +42,7 @@ export function useSkills() {
       }));
     },
   });
+  return { ...query, isRefetching: query.isFetching && !query.isLoading };
 }
 
 export function useToggleSkillFulfilled() {

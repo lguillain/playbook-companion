@@ -3,8 +3,8 @@ import { useSkills } from "./use-skills";
 import { computeHealthScore } from "@/lib/health";
 import type { HealthScore } from "@/lib/types";
 
-export function useHealthScore(): { data: HealthScore | undefined; isLoading: boolean } {
-  const { data: categories, isLoading } = useSkills();
+export function useHealthScore(): { data: HealthScore | undefined; isLoading: boolean; isRefetching: boolean } {
+  const { data: categories, isLoading, isRefetching } = useSkills();
 
   const data = useMemo(() => {
     if (!categories) return undefined;
@@ -12,5 +12,5 @@ export function useHealthScore(): { data: HealthScore | undefined; isLoading: bo
     return computeHealthScore(allSkills);
   }, [categories]);
 
-  return { data, isLoading };
+  return { data, isLoading, isRefetching };
 }

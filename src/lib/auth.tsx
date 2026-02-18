@@ -22,8 +22,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let initialSessionHandled = false;
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      initialSessionHandled = true;
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -33,8 +36,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // Listen for auth changes
+    // Listen for auth changes — skip the initial event if getSession already handled it
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!initialSessionHandled) {
+        // getSession hasn't resolved yet; skip to avoid double fetch
+        return;
+      }
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {

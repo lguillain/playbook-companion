@@ -30,18 +30,30 @@ Deno.serve(async (req)=>{
   if (action === "connect") {
     // Authenticate caller to get user ID for state parameter
     const authHeader = req.headers.get("Authorization");
-    let userId = "";
-    if (authHeader) {
-      const supabase = createClient(Deno.env.get("SUPABASE_URL"), Deno.env.get("SUPABASE_ANON_KEY"), {
-        global: {
-          headers: {
-            Authorization: authHeader
-          }
-        }
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-      const { data: { user } } = await supabase.auth.getUser();
-      userId = user?.id ?? "";
     }
+
+    const supabase = createClient(Deno.env.get("SUPABASE_URL"), Deno.env.get("SUPABASE_ANON_KEY"), {
+      global: {
+        headers: {
+          Authorization: authHeader
+        }
+      }
+    });
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const userId = user.id;
     const redirectUri = `${PUBLIC_SUPABASE_URL}/functions/v1/auth-confluence?action=callback`;
     const scopes = encodeURIComponent("search:confluence read:confluence-content.summary read:confluence-content.all read:confluence-space.summary read:page:confluence read:space:confluence write:page:confluence write:confluence-content offline_access");
     const state = btoa(JSON.stringify({
@@ -104,10 +116,8 @@ Deno.serve(async (req)=>{
       });
       const resources = await resourcesRes.json();
       const cloudId = resources[0]?.id ?? null;
-      console.log("DEBUG confluence callback: userId=" + userId + " cloudId=" + cloudId + " hasToken=" + !!tokenData.access_token);
       const supabaseUrl = Deno.env.get("SUPABASE_URL");
       const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-      console.log("DEBUG supabaseUrl=" + supabaseUrl + " hasServiceKey=" + !!serviceKey);
       const supabase = createClient(supabaseUrl, serviceKey);
       const insertPayload = {
         provider: "confluence",
@@ -116,13 +126,11 @@ Deno.serve(async (req)=>{
         workspace_id: cloudId,
         connected_by: userId
       };
-      console.log("DEBUG insert payload:", JSON.stringify({ ...insertPayload, access_token: "[redacted]" }));
       const { error: insertError } = await supabase.from("connections").insert(insertPayload);
       if (insertError) {
-        console.error("DEBUG insert error: " + JSON.stringify(insertError));
-        return Response.redirect(`${SITE_URL}?error=save_failed&detail=${encodeURIComponent(insertError.message)}`, 302);
+        console.error("Connection save error:", insertError.code);
+        return Response.redirect(`${SITE_URL}?error=save_failed`, 302);
       }
-      console.log("DEBUG insert succeeded");
       return Response.redirect(`${SITE_URL}?connected=confluence`, 302);
     } catch (error) {
       console.error("Confluence OAuth error:", error);

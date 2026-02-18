@@ -287,7 +287,7 @@ type PlaybookViewerProps = {
 };
 
 export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookViewerProps) => {
-  const { data: sections, isLoading: sectionsLoading } = usePlaybookSections();
+  const { data: sections, isLoading: sectionsLoading, isRefetching } = usePlaybookSections();
   const { data: skillsFramework, isLoading: skillsLoading } = useSkills();
   const updateSection = useUpdateSection();
   const createEdit = useCreateStagedEdit();
@@ -545,6 +545,7 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookVie
           <div className="flex items-center gap-3">
             <FileText className="w-4 h-4 text-primary" />
             <h2 className="text-sm font-semibold text-foreground">Playbook Content</h2>
+            {isRefetching && <Loader2 className="w-3.5 h-3.5 text-muted-foreground animate-spin" />}
           </div>
           <div className="h-5 w-px bg-border" />
           <div className="flex items-center gap-2">

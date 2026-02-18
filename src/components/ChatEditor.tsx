@@ -159,7 +159,7 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
   );
 
   const { data: history } = useChatHistory(conversationId);
-  const { sendMessage: streamMessage, isStreaming, streamingContent, stagedEdits, isToolRunning } = useChatStream();
+  const { sendMessage: streamMessage, isStreaming, streamingContent, stagedEdits, isToolRunning, clearStream } = useChatStream();
   const approveEdit = useApproveEdit();
   const rejectEdit = useRejectEdit();
 
@@ -214,7 +214,10 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
     setIsListening(true);
   };
 
-  // Build display messages: history from DB + local optimistic messages
+  const preservedEditsRef = useRef<Map<string, StreamedEdit[]>>(new Map());
+
+  // Build display messages: history from DB + local optimistic messages.
+  // Reattach preserved edits to DB messages that were previously local messages.
   const messages = useMemo(() => {
     const initialMsg: ChatMessage = {
       id: "initial",
@@ -225,7 +228,13 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
       timestamp: new Date().toISOString(),
     };
 
-    const dbMessages = history ?? [];
+    const dbMessages = (history ?? []).map((msg) => {
+      if (msg.role === "assistant" && !msg.edits) {
+        const preserved = preservedEditsRef.current.get(msg.content);
+        if (preserved) return { ...msg, edits: preserved };
+      }
+      return msg;
+    });
     return [initialMsg, ...dbMessages, ...localMessages];
   }, [history, localMessages, isEmbedded, currentSection]);
 
@@ -233,12 +242,21 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
   useEffect(() => {
     setLocalMessages([]);
     setEditStatuses({});
+    preservedEditsRef.current.clear();
   }, [conversationId]);
 
-  // Clear local messages once DB history has caught up (avoid duplicates)
+  // Clear local messages once DB history has caught up (avoid duplicates),
+  // but preserve any edits attached to local messages since the DB doesn't store them.
   const prevHistoryLenRef = useRef(0);
   useEffect(() => {
     if (history && history.length > prevHistoryLenRef.current && localMessages.length > 0 && !isStreaming) {
+      // Capture edits from local messages before clearing them
+      for (const msg of localMessages) {
+        if (msg.edits && msg.edits.length > 0) {
+          // Key by the assistant message content to match with DB history
+          preservedEditsRef.current.set(msg.content, msg.edits);
+        }
+      }
       setLocalMessages([]);
     }
     prevHistoryLenRef.current = history?.length ?? 0;
@@ -295,7 +313,9 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
           : undefined,
       });
 
-      // Keep assistant response in local messages as fallback until DB query catches up
+      // Push assistant response to local messages, then clear the streaming state.
+      // Both happen in the same synchronous block so React batches them together,
+      // avoiding a flash where neither streaming content nor the final message is visible.
       if (result.edits.length > 0 || result.content.trim()) {
         setLocalMessages((prev) => [
           ...prev,
@@ -308,8 +328,10 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
           },
         ]);
       }
+      clearStream();
     } catch {
       // On error, keep local messages visible so user sees what they sent
+      clearStream();
     }
   };
 
@@ -374,8 +396,8 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
           ))}
         </AnimatePresence>
 
-        {/* Streaming text */}
-        {isStreaming && streamingContent && (
+        {/* Streaming text — kept visible until clearStream() is called to avoid flash */}
+        {streamingContent && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex gap-3">
             <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
               <Bot className="w-4 h-4 text-primary" />
@@ -401,7 +423,7 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
         )}
 
         {/* Diff cards without preceding text (tool-only response) */}
-        {isStreaming && !streamingContent && stagedEdits.length > 0 && (
+        {!streamingContent && stagedEdits.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex gap-3">
             <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
               <Bot className="w-4 h-4 text-primary" />

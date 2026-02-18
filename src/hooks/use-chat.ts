@@ -85,21 +85,35 @@ export function useChatStream() {
         );
 
         if (!response.ok) {
-          const err = await response.json();
-          throw new Error(err.error || "Chat request failed");
+          let errorMessage = "Chat request failed";
+          try {
+            const err = await response.json();
+            errorMessage = err.error || errorMessage;
+          } catch {
+            // Response was not JSON (e.g. 502 HTML page)
+          }
+          throw new Error(errorMessage);
         }
 
-        const reader = response.body!.getReader();
+        if (!response.body) {
+          throw new Error("No response body");
+        }
+
+        const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let fullContent = "";
         const edits: StreamedEdit[] = [];
+        let lineBuffer = "";
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
           const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n");
+          lineBuffer += chunk;
+          const lines = lineBuffer.split("\n");
+          // Keep the last (potentially incomplete) line in the buffer
+          lineBuffer = lines.pop() ?? "";
 
           for (const line of lines) {
             if (line.startsWith("data: ")) {
@@ -140,8 +154,10 @@ export function useChatStream() {
 
         return { content: fullContent, edits };
       } finally {
+        // Only clear streaming flag and tool state — keep streamingContent
+        // visible until the caller has pushed the result to localMessages
+        // and calls clearStream() to avoid a flash of empty content.
         setIsStreaming(false);
-        setStreamingContent("");
         setIsToolRunning(false);
         abortRef.current = null;
       }
@@ -149,9 +165,14 @@ export function useChatStream() {
     [queryClient]
   );
 
+  const clearStream = useCallback(() => {
+    setStreamingContent("");
+    setStagedEdits([]);
+  }, []);
+
   const abort = useCallback(() => {
     abortRef.current?.abort();
   }, []);
 
-  return { sendMessage, isStreaming, streamingContent, stagedEdits, isToolRunning, abort };
+  return { sendMessage, isStreaming, streamingContent, stagedEdits, isToolRunning, abort, clearStream };
 }
