@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import type { SkillCategory, Skill } from "@/lib/types";
 
@@ -35,10 +35,25 @@ export function useSkills() {
                 lastUpdated: us?.last_updated ?? undefined,
                 section: us?.section_title ?? undefined,
                 coverageNote: us?.coverage_note ?? undefined,
+                fulfilled: us?.fulfilled ?? false,
               };
             }
           ),
       }));
     },
+  });
+}
+
+export function useToggleSkillFulfilled() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ skillId, fulfilled }: { skillId: string; fulfilled: boolean }) => {
+      const { error } = await supabase
+        .from("user_skills")
+        .update({ fulfilled })
+        .eq("skill_id", skillId);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["skills"] }),
   });
 }

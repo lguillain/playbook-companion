@@ -1,10 +1,12 @@
 import { useMemo } from "react";
-import { DiffMarkdown } from "./DiffMarkdown";
+import { Markdown } from "./Markdown";
+import { TableDiffView } from "./TableDiffView";
 import {
   containsTable,
-  computeInlineDiff,
-  computeHighlightedBefore,
-  computeHighlightedAfter,
+  computeDiffSegments,
+  parsePipeTable,
+  fixGfmTables,
+  type DiffSegment,
 } from "@/lib/compute-diff";
 
 type DiffViewProps = {
@@ -15,34 +17,19 @@ type DiffViewProps = {
 };
 
 export const DiffView = ({ before, after, fullSize = false }: DiffViewProps) => {
-  const textClass = fullSize ? "text-sm" : "text-[11px]";
-  const labelClass = fullSize ? "text-xs" : "text-[9px]";
-  const padClass = fullSize ? "p-3" : "p-2";
+  const labelClass = fullSize ? "text-[10px]" : "text-[9px]";
+  const padClass = fullSize ? "p-2" : "p-1.5";
   const maxH = fullSize ? "max-h-[60vh] overflow-y-auto" : "max-h-[200px] overflow-y-auto";
 
   // New content — no before
   if (!before) {
     return (
-      <div className={textClass}>
-        <span className={`${labelClass} font-semibold text-success uppercase tracking-wider`}>
+      <div>
+        <span className={`${labelClass} font-semibold text-muted-foreground uppercase tracking-wider`}>
           New content
         </span>
-        <div className={`mt-1 rounded bg-success/5 border border-success/10 ${padClass} text-foreground leading-relaxed ${maxH}`}>
-          <DiffMarkdown>{after}</DiffMarkdown>
-        </div>
-      </div>
-    );
-  }
-
-  // Removed content — no after (shouldn't normally happen, but defensive)
-  if (!after) {
-    return (
-      <div className={textClass}>
-        <span className={`${labelClass} font-semibold text-destructive uppercase tracking-wider`}>
-          Removed content
-        </span>
-        <div className={`mt-1 rounded bg-destructive/5 border border-destructive/10 ${padClass} text-muted-foreground leading-relaxed line-through ${maxH}`}>
-          <DiffMarkdown>{before}</DiffMarkdown>
+        <div className={`mt-1 rounded bg-success/5 border border-success/10 ${padClass} text-foreground leading-relaxed min-h-[40px] ${maxH}`}>
+          <Markdown>{fixGfmTables(after)}</Markdown>
         </div>
       </div>
     );
@@ -51,12 +38,12 @@ export const DiffView = ({ before, after, fullSize = false }: DiffViewProps) => 
   // No actual change
   if (before === after) {
     return (
-      <div className={textClass}>
+      <div>
         <span className={`${labelClass} font-semibold text-muted-foreground uppercase tracking-wider`}>
           No changes
         </span>
-        <div className={`mt-1 rounded bg-muted/30 border border-border ${padClass} text-foreground leading-relaxed ${maxH}`}>
-          <DiffMarkdown>{after}</DiffMarkdown>
+        <div className={`mt-1 rounded bg-muted/30 border border-border ${padClass} text-foreground leading-relaxed min-h-[40px] ${maxH}`}>
+          <Markdown>{fixGfmTables(after)}</Markdown>
         </div>
       </div>
     );
@@ -65,13 +52,44 @@ export const DiffView = ({ before, after, fullSize = false }: DiffViewProps) => 
   const hasTable = containsTable(before) || containsTable(after);
 
   if (hasTable) {
-    return <UnifiedDiff before={before} after={after} labelClass={labelClass} padClass={padClass} maxH={maxH} />;
+    return <TableDiff before={before} after={after} labelClass={labelClass} padClass={padClass} maxH={maxH} />;
   }
 
   return <SideBySideDiff before={before} after={after} labelClass={labelClass} padClass={padClass} maxH={maxH} />;
 };
 
-// ── Unified diff (for tables) ───────────────────────────────────────
+// ── Highlighted text renderer ────────────────────────────────────────
+
+type HighlightedTextProps = {
+  segments: DiffSegment[];
+  /** "all" = unified, "before" = skip added, "after" = skip removed */
+  filter: "all" | "before" | "after";
+};
+
+const HighlightedText = ({ segments, filter }: HighlightedTextProps) => (
+  <span className="text-sm text-secondary-foreground leading-relaxed">
+    {segments.map((seg, i) => {
+      if (filter === "before" && seg.type === "added") return null;
+      if (filter === "after" && seg.type === "removed") return null;
+      return (
+        <span
+          key={i}
+          className={
+            seg.type === "added"
+              ? "bg-success/15 rounded-sm"
+              : seg.type === "removed"
+                ? "bg-destructive/15 line-through rounded-sm"
+                : ""
+          }
+        >
+          {seg.text}
+        </span>
+      );
+    })}
+  </span>
+);
+
+// ── Table diff (cell-level structured diff) ──────────────────────────
 
 type InnerDiffProps = {
   before: string;
@@ -81,28 +99,47 @@ type InnerDiffProps = {
   maxH: string;
 };
 
-const UnifiedDiff = ({ before, after, labelClass, padClass, maxH }: InnerDiffProps) => {
-  const merged = useMemo(() => computeInlineDiff(before, after), [before, after]);
+const TableDiff = ({ before, after, labelClass, padClass, maxH }: InnerDiffProps) => {
+  const beforeTable = useMemo(() => parsePipeTable(before), [before]);
+  const afterTable = useMemo(() => parsePipeTable(after), [after]);
 
-  return (
-    <div>
-      <div className="flex items-center gap-3 mb-1">
-        <span className={`${labelClass} font-semibold text-muted-foreground uppercase tracking-wider`}>
-          Changes
-        </span>
-        <div className="flex items-center gap-2">
-          <span className={`inline-flex items-center gap-1 ${labelClass} text-destructive`}>
-            <span className="inline-block w-2.5 h-2.5 rounded-sm bg-destructive/20 border border-destructive/30" />
-            Removed
+  // Both sides parsed as tables → cell-level diff
+  if (beforeTable && afterTable) {
+    return (
+      <div>
+        <div className="flex items-center gap-2 mb-1">
+          <span className={`${labelClass} font-semibold text-muted-foreground uppercase tracking-wider`}>
+            Changes
           </span>
-          <span className={`inline-flex items-center gap-1 ${labelClass} text-success`}>
-            <span className="inline-block w-2.5 h-2.5 rounded-sm bg-success/20 border border-success/30" />
-            Added
+          <span className={`${labelClass} text-muted-foreground/60`}>
+            <span className="text-destructive">red</span> = removed, <span className="text-success">green</span> = added
           </span>
         </div>
+        <div className={`${maxH}`}>
+          <TableDiffView before={beforeTable} after={afterTable} />
+        </div>
       </div>
-      <div className={`rounded border border-border bg-muted/10 ${padClass} leading-relaxed ${maxH}`}>
-        <DiffMarkdown>{merged}</DiffMarkdown>
+    );
+  }
+
+  // Fallback: render fixed GFM through Markdown in stacked layout
+  return (
+    <div className="space-y-2">
+      <div>
+        <span className={`${labelClass} font-semibold text-muted-foreground uppercase tracking-wider`}>
+          Before
+        </span>
+        <div className={`mt-1 rounded bg-destructive/5 border border-destructive/10 ${padClass} text-muted-foreground leading-relaxed min-h-[40px] ${maxH}`}>
+          <Markdown>{fixGfmTables(before)}</Markdown>
+        </div>
+      </div>
+      <div>
+        <span className={`${labelClass} font-semibold text-muted-foreground uppercase tracking-wider`}>
+          After
+        </span>
+        <div className={`mt-1 rounded bg-success/5 border border-success/10 ${padClass} text-foreground leading-relaxed min-h-[40px] ${maxH}`}>
+          <Markdown>{fixGfmTables(after)}</Markdown>
+        </div>
       </div>
     </div>
   );
@@ -111,8 +148,7 @@ const UnifiedDiff = ({ before, after, labelClass, padClass, maxH }: InnerDiffPro
 // ── Side-by-side diff (for non-table content) ──────────────────────
 
 const SideBySideDiff = ({ before, after, labelClass, padClass, maxH }: InnerDiffProps) => {
-  const highlightedBefore = useMemo(() => computeHighlightedBefore(before, after), [before, after]);
-  const highlightedAfter = useMemo(() => computeHighlightedAfter(before, after), [before, after]);
+  const segments = useMemo(() => computeDiffSegments(before, after), [before, after]);
 
   return (
     <div className="grid grid-cols-2 gap-3">
@@ -121,7 +157,7 @@ const SideBySideDiff = ({ before, after, labelClass, padClass, maxH }: InnerDiff
           Before
         </span>
         <div className={`mt-1 rounded bg-destructive/5 border border-destructive/10 ${padClass} text-muted-foreground leading-relaxed min-h-[40px] ${maxH}`}>
-          <DiffMarkdown>{highlightedBefore}</DiffMarkdown>
+          <HighlightedText segments={segments} filter="before" />
         </div>
       </div>
       <div>
@@ -129,7 +165,7 @@ const SideBySideDiff = ({ before, after, labelClass, padClass, maxH }: InnerDiff
           After
         </span>
         <div className={`mt-1 rounded bg-success/5 border border-success/10 ${padClass} text-foreground leading-relaxed min-h-[40px] ${maxH}`}>
-          <DiffMarkdown>{highlightedAfter}</DiffMarkdown>
+          <HighlightedText segments={segments} filter="after" />
         </div>
       </div>
     </div>

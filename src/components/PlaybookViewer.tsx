@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePlaybookSections, useUpdateSection } from "@/hooks/use-playbook-sections";
-import { useSkills } from "@/hooks/use-skills";
+import { useSkills, useToggleSkillFulfilled } from "@/hooks/use-skills";
 import { useCreateStagedEdit } from "@/hooks/use-staged-edits";
 import { extractHeadings, type Heading } from "@/lib/extract-headings";
 import type { PlaybookSection } from "@/lib/types";
@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 
 /** Extract the changed region with a few lines of context. */
 function focusedDiff(before: string, after: string, contextLines = 2): { before: string; after: string } {
@@ -290,6 +291,7 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookVie
   const { data: skillsFramework, isLoading: skillsLoading } = useSkills();
   const updateSection = useUpdateSection();
   const createEdit = useCreateStagedEdit();
+  const toggleFulfilled = useToggleSkillFulfilled();
 
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -683,21 +685,37 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookVie
                   {sectionSkills.map((skill) => {
                     const cfg = statusIcon[skill.status];
                     const Icon = cfg.icon;
-                    const hasNote = skill.status !== "covered" && skill.sectionNote;
+                    const showToggle = skill.status !== "covered";
                     const badge = (
-                      <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium ${cfg.bg} border border-transparent ${hasNote ? "cursor-help" : ""}`}>
-                        <Icon className={`w-3 h-3 ${cfg.color}`} />
-                        {skill.name}
+                      <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium border ${
+                        skill.fulfilled
+                          ? "bg-muted/30 border-border/40 text-muted-foreground"
+                          : `${cfg.bg} border-transparent`
+                      } ${showToggle ? "cursor-help" : ""}`}>
+                        <Icon className={`w-3 h-3 ${skill.fulfilled ? "text-muted-foreground" : cfg.color}`} />
+                        <span className={skill.fulfilled ? "line-through" : ""}>{skill.name}</span>
+                        {skill.fulfilled && <span className="text-[10px] text-muted-foreground italic">Dismissed</span>}
                       </span>
                     );
-                    if (!hasNote) return <span key={skill.id}>{badge}</span>;
+                    if (!showToggle) return <span key={skill.id}>{badge}</span>;
                     return (
-                      <Tooltip key={skill.id}>
-                        <TooltipTrigger asChild>{badge}</TooltipTrigger>
-                        <TooltipContent side="bottom" className="max-w-xs text-xs">
-                          {skill.sectionNote}
-                        </TooltipContent>
-                      </Tooltip>
+                      <HoverCard key={skill.id} openDelay={300} closeDelay={200}>
+                        <HoverCardTrigger asChild>{badge}</HoverCardTrigger>
+                        <HoverCardContent side="bottom" className="w-auto max-w-xs p-2 text-xs">
+                          <div className="flex flex-col gap-1.5">
+                            {skill.sectionNote && <p className="text-muted-foreground">{skill.sectionNote}</p>}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleFulfilled.mutate({ skillId: skill.id, fulfilled: !skill.fulfilled });
+                              }}
+                              className="text-[11px] font-medium text-foreground hover:text-primary transition-colors text-left"
+                            >
+                              {skill.fulfilled ? "Undo" : "Dismiss"}
+                            </button>
+                          </div>
+                        </HoverCardContent>
+                      </HoverCard>
                     );
                   })}
                   {(() => {

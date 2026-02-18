@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
-import { useSkills } from "@/hooks/use-skills";
+import { useSkills, useToggleSkillFulfilled } from "@/hooks/use-skills";
 import { CheckCircle2, AlertTriangle, XCircle, Loader2 } from "lucide-react";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 
 const statusConfig = {
   covered: { icon: CheckCircle2, label: "Covered", color: "text-success", bg: "bg-success/10", border: "border-success/20" },
@@ -16,6 +16,7 @@ const isSkillOutdated = (lastUpdated?: string) => {
 
 export const SkillsFramework = ({ onFillGap, statusFilter }: { onFillGap?: (skillId: string, skillName: string) => void; statusFilter?: string | null }) => {
   const { data: skillsFramework, isLoading } = useSkills();
+  const toggleFulfilled = useToggleSkillFulfilled();
 
   if (isLoading || !skillsFramework) {
     return (
@@ -80,38 +81,52 @@ export const SkillsFramework = ({ onFillGap, statusFilter }: { onFillGap?: (skil
                   const Icon = config.icon;
                   const outdated = isSkillOutdated(skill.lastUpdated);
                   const isActionable = skill.status === "missing" || skill.status === "partial" || outdated;
+                  const showFulfilledToggle = skill.status !== "covered";
 
-                  const hasNote = skill.status !== "covered" && skill.coverageNote;
                   const row = (
                     <div
-                      className={`flex items-center justify-between rounded-lg px-3 py-2 border ${config.bg} ${config.border} ${isActionable ? "cursor-pointer hover:brightness-110 transition-all" : ""}`}
-                      onClick={() => isActionable && onFillGap?.(skill.id, skill.name)}
+                      className={`flex items-center justify-between rounded-lg px-3 py-2 border ${skill.fulfilled ? "bg-muted/30 border-border/40" : `${config.bg} ${config.border}`} ${isActionable && !skill.fulfilled ? "cursor-pointer hover:brightness-110 transition-all" : "transition-all"}`}
+                      onClick={() => isActionable && !skill.fulfilled && onFillGap?.(skill.id, skill.name)}
                     >
                       <div className="flex items-center gap-2">
-                        <Icon className={`w-3.5 h-3.5 ${config.color}`} />
-                        <span className="text-sm text-foreground font-medium">{skill.name}</span>
+                        <Icon className={`w-3.5 h-3.5 ${skill.fulfilled ? "text-muted-foreground" : config.color}`} />
+                        <span className={`text-sm font-medium ${skill.fulfilled ? "text-muted-foreground line-through" : "text-foreground"}`}>{skill.name}</span>
+                        {skill.fulfilled && (
+                          <span className="text-[10px] text-muted-foreground italic">Dismissed</span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
-                        {skill.lastUpdated && (
+                        {skill.lastUpdated && !skill.fulfilled && (
                           <span className={`text-[10px] font-mono ${outdated ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
                             {skill.lastUpdated}
                           </span>
                         )}
-                        {isActionable && (
+                        {isActionable && !skill.fulfilled && (
                           <span className="text-[10px] font-semibold text-primary">{outdated && skill.status === "covered" ? "Update →" : "Fill →"}</span>
                         )}
                       </div>
                     </div>
                   );
 
-                  if (!hasNote) return <div key={skill.id}>{row}</div>;
+                  if (!showFulfilledToggle) return <div key={skill.id}>{row}</div>;
                   return (
-                    <Tooltip key={skill.id}>
-                      <TooltipTrigger asChild>{row}</TooltipTrigger>
-                      <TooltipContent side="right" className="max-w-xs text-xs">
-                        {skill.coverageNote}
-                      </TooltipContent>
-                    </Tooltip>
+                    <HoverCard key={skill.id} openDelay={300} closeDelay={200}>
+                      <HoverCardTrigger asChild>{row}</HoverCardTrigger>
+                      <HoverCardContent side="right" className="w-auto max-w-xs p-2 text-xs">
+                        <div className="flex flex-col gap-1.5">
+                          {skill.coverageNote && <p className="text-muted-foreground">{skill.coverageNote}</p>}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFulfilled.mutate({ skillId: skill.id, fulfilled: !skill.fulfilled });
+                            }}
+                            className="text-[11px] font-medium text-foreground hover:text-primary transition-colors text-left"
+                          >
+                            {skill.fulfilled ? "Undo" : "Dismiss"}
+                          </button>
+                        </div>
+                      </HoverCardContent>
+                    </HoverCard>
                   );
                 })}
               </div>

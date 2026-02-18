@@ -30,6 +30,7 @@ export type UserSkillRow = {
   last_updated: string | null;
   section_title: string | null;
   coverage_note: string | null;
+  fulfilled: boolean;
 };
 
 export type PlaybookSectionRow = {
@@ -117,6 +118,7 @@ export type Skill = {
   lastUpdated?: string;
   section?: string;
   coverageNote?: string;
+  fulfilled: boolean;
 };
 
 export type SkillCategory = {
