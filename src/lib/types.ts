@@ -29,6 +29,7 @@ export type UserSkillRow = {
   status: "covered" | "partial" | "missing";
   last_updated: string | null;
   section_title: string | null;
+  coverage_note: string | null;
 };
 
 export type PlaybookSectionRow = {
@@ -37,6 +38,7 @@ export type PlaybookSectionRow = {
   title: string;
   content: string;
   sort_order: number;
+  depth: number;
   last_updated: string;
   created_at: string;
   source_page_id?: string;
@@ -114,6 +116,7 @@ export type Skill = {
   status: "covered" | "partial" | "missing";
   lastUpdated?: string;
   section?: string;
+  coverageNote?: string;
 };
 
 export type SkillCategory = {
@@ -122,12 +125,18 @@ export type SkillCategory = {
   skills: Skill[];
 };
 
+export type SectionSkillLink = {
+  skillId: string;
+  coverageNote: string | null;
+};
+
 export type PlaybookSection = {
   id: string;
   title: string;
   content: string;
+  depth: number;
   lastUpdated: string;
-  skillsCovered: string[];
+  skillsCovered: SectionSkillLink[];
 };
 
 export type EditSource = "chat" | "manual";

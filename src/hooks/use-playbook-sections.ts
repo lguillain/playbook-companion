@@ -23,10 +23,11 @@ export function usePlaybookSections() {
         id: s.id,
         title: s.title,
         content: s.content,
+        depth: s.depth ?? 0,
         lastUpdated: s.last_updated,
         skillsCovered: (junctions ?? [])
           .filter((j) => j.section_id === s.id)
-          .map((j) => j.skill_id),
+          .map((j) => ({ skillId: j.skill_id, coverageNote: j.coverage_note ?? null })),
       }));
     },
   });
@@ -48,7 +49,7 @@ export function useResetPlaybook() {
       // Reset all user_skills to missing (RLS scopes to current user)
       await supabase
         .from("user_skills")
-        .update({ status: "missing", last_updated: null, section_title: null })
+        .update({ status: "missing", last_updated: null, section_title: null, coverage_note: null })
         .neq("skill_id", "");
     },
     onSuccess: () => {

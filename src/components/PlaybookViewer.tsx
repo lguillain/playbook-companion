@@ -1,15 +1,18 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePlaybookSections, useUpdateSection } from "@/hooks/use-playbook-sections";
 import { useSkills } from "@/hooks/use-skills";
 import { useCreateStagedEdit } from "@/hooks/use-staged-edits";
-import { extractHeadings } from "@/lib/extract-headings";
-import { FileText, Clock, ChevronRight, CheckCircle2, AlertTriangle, XCircle, Pencil, X, Save, Loader2, Filter, ChevronsUpDown, Check } from "lucide-react";
+import { extractHeadings, type Heading } from "@/lib/extract-headings";
+import type { PlaybookSection } from "@/lib/types";
+import { FileText, Clock, ChevronRight, CheckCircle2, AlertTriangle, XCircle, Pencil, X, Save, Loader2, Filter, ChevronsUpDown, Check, PanelRightClose, PanelRightOpen, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { ChatEditor } from "./ChatEditor";
 import { Markdown } from "./Markdown";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 /** Extract the changed region with a few lines of context. */
 function focusedDiff(before: string, after: string, contextLines = 2): { before: string; after: string } {
@@ -150,6 +153,133 @@ function SkillFilterCombobox({ skillFilter, skillsFramework, allSkills, onSkillF
   );
 }
 
+// ── Tree building ────────────────────────────────────────────────────
+
+type SectionTreeNode = PlaybookSection & { children: SectionTreeNode[] };
+
+function buildSectionTree(sections: PlaybookSection[]): SectionTreeNode[] {
+  const roots: SectionTreeNode[] = [];
+  const stack: SectionTreeNode[] = [];
+  for (const section of sections) {
+    const node: SectionTreeNode = { ...section, children: [] };
+    while (stack.length > 0 && stack[stack.length - 1].depth >= section.depth) {
+      stack.pop();
+    }
+    if (stack.length === 0) {
+      roots.push(node);
+    } else {
+      stack[stack.length - 1].children.push(node);
+    }
+    stack.push(node);
+  }
+  return roots;
+}
+
+type SectionTreeItemProps = {
+  node: SectionTreeNode;
+  currentId: string;
+  expandedSections: Set<string>;
+  headingsMap: Map<string, Heading[]>;
+  getSkillsForSection: (sectionId: string) => import("@/lib/types").Skill[];
+  onSelect: (id: string) => void;
+  onToggle: (id: string) => void;
+  level: number;
+};
+
+function SectionTreeItem({
+  node,
+  currentId,
+  expandedSections,
+  headingsMap,
+  getSkillsForSection,
+  onSelect,
+  onToggle,
+  level,
+}: SectionTreeItemProps) {
+  const isActive = currentId === node.id;
+  const isExpanded = expandedSections.has(node.id);
+  const headings = headingsMap.get(node.id) ?? [];
+  const hasChildren = node.children.length > 0 || headings.length > 0;
+  const skills = getSkillsForSection(node.id);
+  const coveredCount = skills.filter((s) => s.status === "covered").length;
+  const totalCount = skills.length;
+  const indent = level * 12 + 8;
+
+  return (
+    <div>
+      <div
+        className={`flex items-start text-xs transition-colors ${
+          isActive
+            ? "bg-primary/10 text-primary"
+            : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+        }`}
+        style={{ paddingLeft: `${indent}px` }}
+      >
+        {/* Chevron toggle — only clickable when there are children */}
+        <button
+          onClick={(e) => { e.stopPropagation(); if (hasChildren) onToggle(node.id); }}
+          className={`w-5 h-7 flex items-center justify-center flex-shrink-0 ${hasChildren ? "cursor-pointer" : "invisible"}`}
+          tabIndex={hasChildren ? 0 : -1}
+        >
+          <ChevronRight className={`w-3 h-3 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+        </button>
+        {/* Section title */}
+        <button
+          onClick={() => onSelect(node.id)}
+          className="flex-1 text-left py-2 pr-3 flex items-start gap-1.5 min-w-0"
+        >
+          <FileText className="w-3 h-3 mt-0.5 flex-shrink-0 opacity-50" />
+          <div className="min-w-0">
+            <span className="block truncate">{node.title}</span>
+            {totalCount > 0 && (
+              <span className={`text-[10px] font-mono ${coveredCount === totalCount ? "text-success" : "text-muted-foreground"}`}>
+                {coveredCount}/{totalCount} skills
+              </span>
+            )}
+          </div>
+        </button>
+      </div>
+      {/* Collapsible children + headings */}
+      {hasChildren && (
+        <Collapsible open={isExpanded}>
+          <CollapsibleContent>
+            {/* Child sections (recursive) */}
+            {node.children.map((child) => (
+              <SectionTreeItem
+                key={child.id}
+                node={child}
+                currentId={currentId}
+                expandedSections={expandedSections}
+                headingsMap={headingsMap}
+                getSkillsForSection={getSkillsForSection}
+                onSelect={onSelect}
+                onToggle={onToggle}
+                level={level + 1}
+              />
+            ))}
+            {/* Heading sub-nav (only for active section) */}
+            {isActive && headings.length > 0 && (
+              <div className="pb-1">
+                {headings.map((h) => (
+                  <button
+                    key={h.slug}
+                    onClick={() => document.getElementById(h.slug)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                    className="w-full text-left text-[11px] py-1 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors truncate"
+                    style={{ paddingLeft: `${indent + 20 + (h.level - 2) * 12}px` }}
+                    title={h.text}
+                  >
+                    {h.text}
+                  </button>
+                ))}
+              </div>
+            )}
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+    </div>
+  );
+}
+
 type PlaybookViewerProps = {
   skillFilter?: { skillId: string; skillName: string } | null;
   onSkillFilterChange: (filter: { skillId: string; skillName: string } | null) => void;
@@ -166,15 +296,36 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookVie
   const [editDraft, setEditDraft] = useState("");
   const [savedFlash, setSavedFlash] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilterKey | null>(null);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [chatPanelOpen, setChatPanelOpen] = useState(true);
+  const [chatPrefill, setChatPrefill] = useState<{ text: string; key: number } | undefined>();
+  const chatPrefillCounter = useRef(0);
 
   const allSkills = useMemo(
     () => skillsFramework?.flatMap((c) => c.skills) ?? [],
     [skillsFramework]
   );
 
+  type SectionSkill = import("@/lib/types").Skill & { sectionNote?: string };
+
   const getSkillsForSection = useMemo(() => {
-    return (sectionTitle: string) => allSkills.filter((s) => s.section === sectionTitle);
-  }, [allSkills]);
+    // Build a lookup from section ID → skills with section-specific coverage notes
+    const map = new Map<string, SectionSkill[]>();
+    if (sections) {
+      const skillById = new Map(allSkills.map((s) => [s.id, s]));
+      for (const section of sections) {
+        const skills: SectionSkill[] = [];
+        for (const link of section.skillsCovered) {
+          const skill = skillById.get(link.skillId);
+          if (skill) {
+            skills.push({ ...skill, sectionNote: link.coverageNote ?? undefined });
+          }
+        }
+        if (skills.length > 0) map.set(section.id, skills);
+      }
+    }
+    return (sectionId: string) => map.get(sectionId) ?? [];
+  }, [allSkills, sections]);
 
   const { displaySections, filterMode } = useMemo<{
     displaySections: typeof sections extends (infer T)[] | undefined ? T[] : never[];
@@ -191,7 +342,7 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookVie
 
       // 1. Direct match: skill linked to section via junction table or section_title
       const direct = sections.filter((section) => {
-        if (section.skillsCovered.includes(skillFilter.skillId)) return true;
+        if (section.skillsCovered.some((l) => l.skillId === skillFilter.skillId)) return true;
         if (targetSkill?.section && targetSkill.section === section.title) return true;
         return false;
       });
@@ -204,7 +355,7 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookVie
         if (category) {
           const siblingIds = new Set(category.skills.map((s) => s.id));
           const byCat = sections.filter((section) =>
-            section.skillsCovered.some((sid) => siblingIds.has(sid))
+            section.skillsCovered.some((l) => siblingIds.has(l.skillId))
           );
           if (byCat.length > 0) {
             filtered = byCat;
@@ -218,14 +369,10 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookVie
       }
     }
 
-    // Apply status filter on top — check both junction-table links and title-based links
+    // Apply status filter on top using junction-table links
     if (statusFilter) {
       filtered = filtered.filter((section) => {
-        const linkedSkillIds = new Set(section.skillsCovered);
-        const titleSkills = getSkillsForSection(section.title);
-        for (const s of titleSkills) linkedSkillIds.add(s.id);
-
-        const linkedSkills = allSkills.filter((s) => linkedSkillIds.has(s.id));
+        const linkedSkills = getSkillsForSection(section.id);
         if (linkedSkills.length === 0) return false;
         if (statusFilter === "outdated") return linkedSkills.some((s) => isSkillOutdated(s.lastUpdated));
         return linkedSkills.some((s) => s.status === statusFilter);
@@ -246,6 +393,39 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookVie
     }
     return counts;
   }, [allSkills]);
+
+  // Memoize headings for all sections (used in tree nav)
+  const headingsMap = useMemo(() => {
+    const map = new Map<string, Heading[]>();
+    for (const section of displaySections) {
+      const headings = extractHeadings(section.content);
+      if (headings.length > 0) map.set(section.id, headings);
+    }
+    return map;
+  }, [displaySections]);
+
+  // Build tree from flat sections
+  const sectionTree = useMemo(() => buildSectionTree(displaySections), [displaySections]);
+
+  const toggleExpanded = useCallback((id: string) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const selectSection = useCallback((id: string) => {
+    setActiveSection(id);
+    setEditing(false);
+    // Auto-expand when selecting
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }, []);
 
   // Auto-select first section when filter changes or data loads
   useEffect(() => {
@@ -311,7 +491,7 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookVie
     );
   }
 
-  const sectionSkills = getSkillsForSection(current.title);
+  const sectionSkills = getSkillsForSection(current.id);
 
   const startEditing = () => {
     setEditDraft(current.content);
@@ -417,12 +597,19 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookVie
               </motion.span>
             )}
           </AnimatePresence>
+          <button
+            onClick={() => setChatPanelOpen((v) => !v)}
+            className="ml-auto flex items-center gap-1.5 rounded-lg bg-muted/50 px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+            title={chatPanelOpen ? "Hide chat panel" : "Show chat panel"}
+          >
+            {chatPanelOpen ? <PanelRightClose className="w-3.5 h-3.5" /> : <PanelRightOpen className="w-3.5 h-3.5" />}
+          </button>
         </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left Side: Playbook Navigation & Content */}
-        <div className="flex flex-1 overflow-hidden border-r border-border">
+        <div className="flex flex-1 overflow-hidden">
           {/* Sidebar */}
           <div className="w-56 border-r border-border flex-shrink-0 flex flex-col">
             <SkillFilterCombobox
@@ -432,51 +619,19 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookVie
               onSkillFilterChange={onSkillFilterChange}
             />
             <div className="flex-1 overflow-y-auto py-1">
-            {displaySections.map((section) => {
-              const skills = getSkillsForSection(section.title);
-              const coveredCount = skills.filter((s) => s.status === "covered").length;
-              const totalCount = skills.length;
-              const isActive = currentId === section.id;
-              const headings = isActive ? extractHeadings(section.content) : [];
-
-              return (
-                <div key={section.id}>
-                  <button
-                    onClick={() => { setActiveSection(section.id); setEditing(false); }}
-                    className={`w-full text-left px-4 py-2.5 flex items-start gap-2 text-xs transition-colors ${
-                      isActive
-                        ? "bg-primary/10 text-primary border-r-2 border-primary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    }`}
-                  >
-                    <ChevronRight className={`w-3 h-3 mt-0.5 flex-shrink-0 transition-transform ${isActive ? "rotate-90" : ""}`} />
-                    <div>
-                      <span className="block">{section.title}</span>
-                      {totalCount > 0 && (
-                        <span className={`text-[10px] font-mono ${coveredCount === totalCount ? "text-success" : "text-muted-foreground"}`}>
-                          {coveredCount}/{totalCount} skills
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                  {isActive && headings.length > 0 && (
-                    <div className="pb-1">
-                      {headings.map((h) => (
-                        <button
-                          key={h.slug}
-                          onClick={() => document.getElementById(h.slug)?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                          className="w-full text-left text-[11px] py-1 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors truncate"
-                          style={{ paddingLeft: `${(h.level - 1) * 12 + 16}px` }}
-                          title={h.text}
-                        >
-                          {h.text}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+              {sectionTree.map((node) => (
+                <SectionTreeItem
+                  key={node.id}
+                  node={node}
+                  currentId={currentId}
+                  expandedSections={expandedSections}
+                  headingsMap={headingsMap}
+                  getSkillsForSection={getSkillsForSection}
+                  onSelect={selectSection}
+                  onToggle={toggleExpanded}
+                  level={0}
+                />
+              ))}
             </div>
           </div>
 
@@ -528,13 +683,42 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookVie
                   {sectionSkills.map((skill) => {
                     const cfg = statusIcon[skill.status];
                     const Icon = cfg.icon;
-                    return (
-                      <span key={skill.id} className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium ${cfg.bg} border border-transparent`}>
+                    const hasNote = skill.status !== "covered" && skill.sectionNote;
+                    const badge = (
+                      <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium ${cfg.bg} border border-transparent ${hasNote ? "cursor-help" : ""}`}>
                         <Icon className={`w-3 h-3 ${cfg.color}`} />
                         {skill.name}
                       </span>
                     );
+                    if (!hasNote) return <span key={skill.id}>{badge}</span>;
+                    return (
+                      <Tooltip key={skill.id}>
+                        <TooltipTrigger asChild>{badge}</TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-xs text-xs">
+                          {skill.sectionNote}
+                        </TooltipContent>
+                      </Tooltip>
+                    );
                   })}
+                  {(() => {
+                    const gaps = sectionSkills.filter((s) => s.status !== "covered" && s.sectionNote);
+                    if (gaps.length === 0) return null;
+                    return (
+                      <button
+                        onClick={() => {
+                          const lines = gaps.map((s) => `- **${s.name}** (${s.status}): ${s.sectionNote}`).join("\n");
+                          const text = `Help me improve this section. Here are the skill gaps:\n\n${lines}`;
+                          chatPrefillCounter.current += 1;
+                          setChatPrefill({ text, key: chatPrefillCounter.current });
+                          if (!chatPanelOpen) setChatPanelOpen(true);
+                        }}
+                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        Improve with AI
+                      </button>
+                    );
+                  })()}
                 </div>
               )}
             </div>
@@ -552,14 +736,26 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookVie
           </div>
         </div>
 
-        {/* Right Side: Persistent Chat */}
-        <div className="w-[400px] flex-shrink-0">
-          <ChatEditor
-            currentSection={current.title}
-            sectionId={current.id}
-            isEmbedded
-          />
-        </div>
+        {/* Right Side: Collapsible Chat Panel */}
+        <AnimatePresence initial={false}>
+          {chatPanelOpen && (
+            <motion.div
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 400, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className="flex-shrink-0 border-l border-border overflow-hidden"
+            >
+              <ChatEditor
+                currentSection={current.title}
+                sectionId={current.id}
+                isEmbedded
+                prefillMessage={chatPrefill?.text}
+                prefillKey={chatPrefill?.key}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );

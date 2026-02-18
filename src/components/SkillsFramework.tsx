@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useSkills } from "@/hooks/use-skills";
 import { CheckCircle2, AlertTriangle, XCircle, Loader2 } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 const statusConfig = {
   covered: { icon: CheckCircle2, label: "Covered", color: "text-success", bg: "bg-success/10", border: "border-success/20" },
@@ -80,9 +81,9 @@ export const SkillsFramework = ({ onFillGap, statusFilter }: { onFillGap?: (skil
                   const outdated = isSkillOutdated(skill.lastUpdated);
                   const isActionable = skill.status === "missing" || skill.status === "partial" || outdated;
 
-                  return (
+                  const hasNote = skill.status !== "covered" && skill.coverageNote;
+                  const row = (
                     <div
-                      key={skill.id}
                       className={`flex items-center justify-between rounded-lg px-3 py-2 border ${config.bg} ${config.border} ${isActionable ? "cursor-pointer hover:brightness-110 transition-all" : ""}`}
                       onClick={() => isActionable && onFillGap?.(skill.id, skill.name)}
                     >
@@ -101,6 +102,16 @@ export const SkillsFramework = ({ onFillGap, statusFilter }: { onFillGap?: (skil
                         )}
                       </div>
                     </div>
+                  );
+
+                  if (!hasNote) return <div key={skill.id}>{row}</div>;
+                  return (
+                    <Tooltip key={skill.id}>
+                      <TooltipTrigger asChild>{row}</TooltipTrigger>
+                      <TooltipContent side="right" className="max-w-xs text-xs">
+                        {skill.coverageNote}
+                      </TooltipContent>
+                    </Tooltip>
                   );
                 })}
               </div>

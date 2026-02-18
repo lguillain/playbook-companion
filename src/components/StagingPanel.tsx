@@ -5,7 +5,7 @@ import { usePublish, useNotify } from "@/hooks/use-publish";
 import { useConnections } from "@/hooks/use-connections";
 import { GitBranch, Check, X, Send, Bell, MessageSquare, Edit3, Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
-import { Markdown } from "./Markdown";
+import { DiffView } from "./DiffView";
 
 const providerLabels: Record<string, string> = {
   confluence: "Confluence",
@@ -181,20 +181,7 @@ export const StagingPanel = () => {
               )}
             </div>
 
-              <div className="grid grid-cols-2 gap-3 text-xs">
-              <div>
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Before</span>
-                <div className="mt-1 rounded bg-destructive/5 border border-destructive/10 p-2 text-muted-foreground leading-relaxed min-h-[40px]">
-                  {edit.before ? <Markdown>{edit.before}</Markdown> : <span className="italic text-muted-foreground/50">Empty — new content</span>}
-                </div>
-              </div>
-              <div>
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">After</span>
-                <div className="mt-1 rounded bg-success/5 border border-success/10 p-2 text-foreground leading-relaxed min-h-[40px]">
-                  <Markdown>{edit.after}</Markdown>
-                </div>
-              </div>
-            </div>
+            <DiffView before={edit.before} after={edit.after} fullSize />
           </motion.div>
         ))}
 

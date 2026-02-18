@@ -34,6 +34,7 @@ export function useSkills() {
                 status: (us?.status as Skill["status"]) ?? "missing",
                 lastUpdated: us?.last_updated ?? undefined,
                 section: us?.section_title ?? undefined,
+                coverageNote: us?.coverage_note ?? undefined,
               };
             }
           ),

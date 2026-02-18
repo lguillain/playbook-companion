@@ -7,6 +7,7 @@ import type { ChatMessage, StreamedEdit } from "@/lib/types";
 import { useChatStream, useChatHistory } from "@/hooks/use-chat";
 import { useApproveEdit, useRejectEdit } from "@/hooks/use-staged-edits";
 import { Markdown } from "./Markdown";
+import { DiffView } from "./DiffView";
 
 // ── Inline diff card ──────────────────────────────────────────────────
 
@@ -23,26 +24,7 @@ const DiffCard = ({ edit, onAccept, onReject, status, isProcessing }: DiffCardPr
   const [open, setOpen] = useState(false);
 
   const diffContent = (fullSize: boolean) => (
-    <div className={fullSize ? "grid grid-cols-2 gap-4 text-sm" : "grid grid-cols-2 gap-2 text-[11px]"}>
-      <div>
-        <span className={`${fullSize ? "text-xs" : "text-[9px]"} font-semibold text-muted-foreground uppercase tracking-wider`}>
-          Before
-        </span>
-        <div className={`mt-1 rounded bg-destructive/5 border border-destructive/10 ${fullSize ? "p-3" : "p-1.5"} text-muted-foreground leading-relaxed ${fullSize ? "max-h-[60vh] overflow-y-auto" : "max-h-[150px] overflow-y-auto"}`}>
-          {edit.before || (
-            <span className="italic text-muted-foreground/50">Empty — new content</span>
-          )}
-        </div>
-      </div>
-      <div>
-        <span className={`${fullSize ? "text-xs" : "text-[9px]"} font-semibold text-muted-foreground uppercase tracking-wider`}>
-          After
-        </span>
-        <div className={`mt-1 rounded bg-success/5 border border-success/10 ${fullSize ? "p-3" : "p-1.5"} text-foreground leading-relaxed ${fullSize ? "max-h-[60vh] overflow-y-auto" : "max-h-[150px] overflow-y-auto"}`}>
-          {edit.after}
-        </div>
-      </div>
-    </div>
+    <DiffView before={edit.before} after={edit.after} fullSize={fullSize} />
   );
 
   const actionButtons = (fullSize: boolean) =>
@@ -166,9 +148,11 @@ type ChatEditorProps = {
   currentSection?: string;
   sectionId?: string;
   isEmbedded?: boolean;
+  prefillMessage?: string;
+  prefillKey?: number;
 };
 
-export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false }: ChatEditorProps) => {
+export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, prefillMessage, prefillKey }: ChatEditorProps) => {
   const conversationId = useMemo(
     () => sectionId ? `section-${sectionId}` : "dashboard",
     [sectionId]
@@ -185,6 +169,14 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false }: Ch
   const [processingEditId, setProcessingEditId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Prefill input from parent (e.g. "Improve with AI" button)
+  useEffect(() => {
+    if (prefillMessage) {
+      setInput(prefillMessage);
+      textareaRef.current?.focus();
+    }
+  }, [prefillKey]);
 
   // Voice-to-text via Web Speech API
   const [isListening, setIsListening] = useState(false);

@@ -1,8 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { env } from "../_shared/env.ts";
-import { getSkillsPromptBlock, ALL_SKILL_IDS } from "../_shared/skills.ts";
 import { splitIntoSections } from "../_shared/split-sections.ts";
+import { analyzeSections } from "../_shared/analyze-sections.ts";
 
 const ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY");
 const NOTION_API_VERSION = "2022-06-28";
@@ -118,6 +118,7 @@ async function fetchAllBlocks(
 type ParsedPage = {
   id: string;
   title: string;
+  parentId: string | null;
   markdown: string;
   lastEdited: string | null;
 };
@@ -156,12 +157,14 @@ async function fetchNotionPages(
     const lastEdited = page.last_edited_time
       ? page.last_edited_time.split("T")[0]
       : null;
+    // Track parent page ID for tree building
+    const parentId = page.parent?.type === "page_id" ? page.parent.page_id : null;
 
     try {
       const blocks = await fetchAllBlocks(page.id, token);
       const markdown = blocksToMarkdown(blocks);
       if (markdown.trim()) {
-        pages.push({ id: page.id, title, markdown, lastEdited });
+        pages.push({ id: page.id, title, parentId, markdown, lastEdited });
       }
     } catch (err) {
       console.error(`Failed to fetch blocks for page ${page.id}:`, err);
@@ -169,6 +172,34 @@ async function fetchNotionPages(
   }
 
   return pages;
+}
+
+// ── Tree helpers ────────────────────────────────────────────────────
+
+type TreePage = ParsedPage & { depth: number };
+
+/** Sort pages in depth-first tree order using parentId. */
+function sortPagesAsTree(pages: ParsedPage[]): TreePage[] {
+  const idSet = new Set(pages.map((p) => p.id));
+  const byParent = new Map<string | null, ParsedPage[]>();
+
+  for (const p of pages) {
+    const key = p.parentId && idSet.has(p.parentId) ? p.parentId : null;
+    const list = byParent.get(key) ?? [];
+    list.push(p);
+    byParent.set(key, list);
+  }
+
+  const result: TreePage[] = [];
+  function walk(parentId: string | null, depth: number) {
+    for (const p of byParent.get(parentId) ?? []) {
+      result.push({ ...p, depth });
+      walk(p.id, depth + 1);
+    }
+  }
+  walk(null, 0);
+
+  return result;
 }
 
 // ── Main handler ────────────────────────────────────────────────────
@@ -263,16 +294,20 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Sort pages into tree order (parent → children)
+    const orderedPages = sortPagesAsTree(parsedPages);
+
     // Split each page's markdown by headings into finer-grained sections
     type ParsedSection = {
       title: string;
       content: string;
       sourcePageId: string;
       lastEdited: string | null;
+      depth: number;
     };
     const allSections: ParsedSection[] = [];
 
-    for (const page of parsedPages) {
+    for (const page of orderedPages) {
       const headingSections = splitIntoSections(page.markdown, page.title);
 
       if (headingSections.length === 1 && headingSections[0].title === page.title) {
@@ -282,114 +317,23 @@ Deno.serve(async (req) => {
           content: headingSections[0].content,
           sourcePageId: page.id,
           lastEdited: page.lastEdited,
+          depth: page.depth,
         });
       } else {
-        for (const sec of headingSections) {
+        // First section uses the page title and page depth (acts as parent node)
+        // Subsequent heading sections nest one level deeper
+        for (let j = 0; j < headingSections.length; j++) {
+          const sec = headingSections[j];
+          const isFirst = j === 0;
           allSections.push({
-            title: `${page.title} > ${sec.title}`,
+            title: isFirst ? page.title : sec.title,
             content: sec.content,
             sourcePageId: page.id,
             lastEdited: page.lastEdited,
+            depth: isFirst ? page.depth : page.depth + 1,
           });
         }
       }
-    }
-
-    // Build full content for Claude to analyze
-    const sectionsContent = allSections.map((s, i) => {
-      return `[Section ${i}] "${s.title}"\n${s.content}`;
-    }).join("\n\n---\n\n");
-
-    const skillsBlock = getSkillsPromptBlock();
-
-    // Send full content to Claude for accurate skill mapping & coverage assessment
-    const analysisResponse = await fetch(
-      "https://api.anthropic.com/v1/messages",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": ANTHROPIC_API_KEY!,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-5-20250929",
-          max_tokens: 4096,
-          system: `You are a sales playbook analyzer. Given the full content of playbook sections, you must:
-1. Map each section (by its index) to the relevant skills from the EXACT list below.
-2. Assess every skill's coverage based on the ACTUAL CONTENT (not just titles):
-   - "covered": the section contains substantive, actionable content for that skill (specific guidance, examples, frameworks, or detailed methodology)
-   - "partial": the section mentions the topic but lacks depth — e.g. a heading with only a few bullet points, vague guidance, or a brief mention without actionable detail
-   - "missing": no section meaningfully addresses this skill
-
-SKILLS FRAMEWORK (use ONLY these skill IDs):
-
-${skillsBlock}
-
-RULES:
-- Use ONLY skill IDs from the list above (e.g. "i1", "m2", "dm3"). Do not invent new IDs.
-- Every skill must appear in skillAssessments with a status.
-- Every skill that is "covered" or "partial" MUST appear in sectionSkills mapped to the most relevant section. Only "missing" skills should have no section mapping.
-- Each skill should be mapped to at most ONE section (the most relevant one).
-- Be honest about coverage — a short or vague section is "partial", not "covered".
-- Return ONLY valid JSON, no other text.
-
-Return this JSON structure:
-{
-  "sectionSkills": [
-    { "sectionIndex": 0, "skillIds": ["i1", "i2"] },
-    { "sectionIndex": 1, "skillIds": ["m1"] }
-  ],
-  "skillAssessments": [
-    { "id": "i1", "status": "covered" },
-    { "id": "i2", "status": "partial" }
-  ]
-}`,
-          messages: [
-            {
-              role: "user",
-              content: `Analyze these ${allSections.length} playbook sections from Notion:\n\n${sectionsContent}`,
-            },
-          ],
-        }),
-      }
-    );
-
-    if (!analysisResponse.ok) {
-      throw new Error(`Claude API error: ${analysisResponse.status}`);
-    }
-
-    const analysisData = await analysisResponse.json();
-    const analysisText = analysisData.content[0].text;
-
-    const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("Failed to parse analysis response");
-
-    let analysis: {
-      sectionSkills: { sectionIndex: number; skillIds: string[] }[];
-      skillAssessments: { id: string; status: string }[];
-    };
-    try {
-      analysis = JSON.parse(jsonMatch[0]);
-    } catch (parseErr) {
-      console.error("JSON parse failed. Response length:", analysisText.length);
-      let fixedJson = jsonMatch[0];
-      fixedJson = fixedJson.replace(/,\s*[^,\[\]{}]*$/, "");
-      const opens = (fixedJson.match(/\[/g) || []).length - (fixedJson.match(/\]/g) || []).length;
-      const braces = (fixedJson.match(/\{/g) || []).length - (fixedJson.match(/\}/g) || []).length;
-      for (let i = 0; i < opens; i++) fixedJson += "]";
-      for (let i = 0; i < braces; i++) fixedJson += "}";
-      try {
-        analysis = JSON.parse(fixedJson);
-      } catch {
-        throw new Error(`Failed to parse Claude analysis response: ${(parseErr as Error).message}`);
-      }
-    }
-
-    // Build a lookup from sectionIndex → skillIds
-    const sectionSkillMap = new Map<number, string[]>();
-    for (const ss of analysis.sectionSkills ?? []) {
-      sectionSkillMap.set(ss.sectionIndex, (ss.skillIds ?? []).filter((id) => ALL_SKILL_IDS.has(id)));
     }
 
     // Clear existing data for THIS USER
@@ -398,17 +342,10 @@ Return this JSON structure:
     await adminClient.from("chat_messages").delete().eq("created_by", user.id);
     await adminClient.from("playbook_sections").delete().eq("user_id", user.id);
 
-    // Reset all user_skills to "missing" for this user
-    await adminClient
-      .from("user_skills")
-      .update({ status: "missing", last_updated: null, section_title: null })
-      .eq("user_id", user.id);
-
     const fallbackDate = new Date().toISOString().split("T")[0];
 
     // Insert each heading-level section, storing source page ID
-    const mappedSkillIds = new Set<string>();
-    const insertedSections: { id: string; title: string; sectionIndex: number }[] = [];
+    const insertedSections: { id: string; title: string; content: string; lastModified?: string | null }[] = [];
 
     for (let i = 0; i < allSections.length; i++) {
       const sec = allSections[i];
@@ -422,72 +359,27 @@ Return this JSON structure:
           sort_order: i + 1,
           last_updated: sec.lastEdited ?? fallbackDate,
           source_page_id: sec.sourcePageId,
+          depth: sec.depth,
         })
         .select("id")
         .single();
 
       if (!insertedSection) continue;
-      const sectionId = insertedSection.id;
-      insertedSections.push({ id: sectionId, title: sec.title, sectionIndex: i });
-
-      const skillIds = sectionSkillMap.get(i) ?? [];
-      for (const skillId of skillIds) {
-        mappedSkillIds.add(skillId);
-        await adminClient
-          .from("section_skills")
-          .insert({ section_id: sectionId, skill_id: skillId, user_id: user.id });
-
-        await adminClient
-          .from("user_skills")
-          .update({ section_title: sec.title })
-          .eq("user_id", user.id)
-          .eq("skill_id", skillId);
-      }
+      insertedSections.push({
+        id: insertedSection.id,
+        title: sec.title,
+        content: sec.content,
+        lastModified: sec.lastEdited,
+      });
     }
 
-    // Build a skill → source date lookup from the section-skill mapping
-    const skillDateMap = new Map<string, string | null>();
-    for (const [sectionIndex, skillIds] of sectionSkillMap) {
-      const secDate = allSections[sectionIndex]?.lastEdited ?? null;
-      for (const skillId of skillIds) {
-        skillDateMap.set(skillId, secDate);
-      }
-    }
-
-    // Update skill statuses from assessments
-    // Safety net: if a skill is covered/partial but wasn't mapped to a section,
-    // link it to the first section so it's discoverable in the playbook tab
-    if (analysis.skillAssessments) {
-      for (const assessment of analysis.skillAssessments) {
-        if (!ALL_SKILL_IDS.has(assessment.id)) continue;
-        const status = ["covered", "partial", "missing"].includes(assessment.status)
-          ? assessment.status
-          : "missing";
-
-        // Link orphaned non-missing skills to the first section
-        if (status !== "missing" && !mappedSkillIds.has(assessment.id) && insertedSections.length > 0) {
-          const fallbackSection = insertedSections[0];
-          await adminClient
-            .from("section_skills")
-            .insert({ section_id: fallbackSection.id, skill_id: assessment.id, user_id: user.id });
-          await adminClient
-            .from("user_skills")
-            .update({ section_title: fallbackSection.title })
-            .eq("user_id", user.id)
-            .eq("skill_id", assessment.id);
-        }
-
-        const skillDate = skillDateMap.get(assessment.id) ?? fallbackDate;
-        await adminClient
-          .from("user_skills")
-          .update({
-            status,
-            last_updated: status !== "missing" ? skillDate : null,
-          })
-          .eq("user_id", user.id)
-          .eq("skill_id", assessment.id);
-      }
-    }
+    // Analyze sections for skill coverage
+    await analyzeSections(
+      insertedSections,
+      adminClient,
+      user.id,
+      ANTHROPIC_API_KEY!,
+    );
 
     // Mark import complete
     await adminClient
