@@ -127,7 +127,7 @@ const TableDiff = ({ before, after, labelClass, padClass, maxH }: InnerDiffProps
     <div className="space-y-2">
       <div>
         <span className={`${labelClass} font-semibold text-muted-foreground uppercase tracking-wider`}>
-          Before
+          Current version
         </span>
         <div className={`mt-1 rounded bg-destructive/5 border border-destructive/10 ${padClass} text-muted-foreground leading-relaxed min-h-[40px] ${maxH}`}>
           <Markdown>{fixGfmTables(before)}</Markdown>
@@ -135,7 +135,7 @@ const TableDiff = ({ before, after, labelClass, padClass, maxH }: InnerDiffProps
       </div>
       <div>
         <span className={`${labelClass} font-semibold text-muted-foreground uppercase tracking-wider`}>
-          After
+          Proposed version
         </span>
         <div className={`mt-1 rounded bg-success/5 border border-success/10 ${padClass} text-foreground leading-relaxed min-h-[40px] ${maxH}`}>
           <Markdown>{fixGfmTables(after)}</Markdown>
@@ -154,7 +154,7 @@ const SideBySideDiff = ({ before, after, labelClass, padClass, maxH }: InnerDiff
     <div className="grid grid-cols-2 gap-3">
       <div>
         <span className={`${labelClass} font-semibold text-muted-foreground uppercase tracking-wider`}>
-          Before
+          Current version
         </span>
         <div className={`mt-1 rounded bg-destructive/5 border border-destructive/10 ${padClass} text-muted-foreground leading-relaxed min-h-[40px] ${maxH}`}>
           <HighlightedText segments={segments} filter="before" />
@@ -162,7 +162,7 @@ const SideBySideDiff = ({ before, after, labelClass, padClass, maxH }: InnerDiff
       </div>
       <div>
         <span className={`${labelClass} font-semibold text-muted-foreground uppercase tracking-wider`}>
-          After
+          Proposed version
         </span>
         <div className={`mt-1 rounded bg-success/5 border border-success/10 ${padClass} text-foreground leading-relaxed min-h-[40px] ${maxH}`}>
           <HighlightedText segments={segments} filter="after" />

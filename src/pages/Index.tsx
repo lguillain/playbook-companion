@@ -18,9 +18,15 @@ const Index = () => {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   const [skillFilter, setSkillFilter] = useState<{ skillId: string; skillName: string } | null>(null);
+  const [targetSectionId, setTargetSectionId] = useState<string | null>(null);
 
   const handleFillGap = (skillId: string, skillName: string) => {
     setSkillFilter({ skillId, skillName });
+    setActiveTab("playbook");
+  };
+
+  const handleNavigateToSection = (sectionId: string) => {
+    setTargetSectionId(sectionId);
     setActiveTab("playbook");
   };
 
@@ -41,13 +47,13 @@ const Index = () => {
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-5 items-start">
               <SkillsFramework onFillGap={handleFillGap} statusFilter={statusFilter} />
               <div className="lg:sticky lg:top-20">
-                <ChatEditor />
+                <ChatEditor onNavigateToSection={handleNavigateToSection} sections={sections} />
               </div>
             </div>
           </div>
         )}
 
-        {activeTab === "playbook" && <PlaybookViewer skillFilter={skillFilter} onSkillFilterChange={setSkillFilter} />}
+        {activeTab === "playbook" && <PlaybookViewer skillFilter={skillFilter} onSkillFilterChange={setSkillFilter} initialSectionId={targetSectionId} onInitialSectionConsumed={() => setTargetSectionId(null)} />}
 
         {activeTab === "staging" && <StagingPanel />}
 

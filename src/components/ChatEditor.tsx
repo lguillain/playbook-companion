@@ -1,13 +1,64 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Sparkles, Bot, User, Mic, MicOff, GitBranch, Check, X, Loader2, Maximize2 } from "lucide-react";
+import { Send, Sparkles, Bot, User, Mic, MicOff, GitBranch, Check, X, Loader2, Maximize2, FileText, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
-import type { ChatMessage, StreamedEdit } from "@/lib/types";
+import type { ChatMessage, StreamedEdit, PlaybookSection } from "@/lib/types";
 import { useChatStream, useChatHistory } from "@/hooks/use-chat";
 import { useApproveEdit, useRejectEdit } from "@/hooks/use-staged-edits";
 import { Markdown } from "./Markdown";
 import { DiffView } from "./DiffView";
+
+// ── Section link card ────────────────────────────────────────────────
+
+type SectionLinkCardProps = {
+  title: string;
+  onClick: () => void;
+};
+
+const SectionPill = ({ title, onClick }: SectionLinkCardProps) => (
+  <button
+    onClick={onClick}
+    className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 hover:bg-primary/10 pl-2 pr-2.5 py-1 text-left transition-colors group flex-shrink-0"
+  >
+    <FileText className="w-3 h-3 text-primary flex-shrink-0" />
+    <span className="text-[11px] font-medium text-foreground whitespace-nowrap">{title}</span>
+    <ArrowRight className="w-3 h-3 text-primary opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+  </button>
+);
+
+/** Strip all leading/trailing whitespace including \u00A0 (non-breaking space). */
+function cleanTitle(title: string): string {
+  return title.replace(/^[\s\u00A0]+|[\s\u00A0]+$/g, "");
+}
+
+/** Strip markdown formatting so title matching works through **bold**, _italic_, etc. */
+function stripFormatting(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/\*(.+?)\*/g, "$1")
+    .replace(/__(.+?)__/g, "$1")
+    .replace(/_(.+?)_/g, "$1")
+    .replace(/`(.+?)`/g, "$1")
+    .replace(/\[(.+?)\]\(.+?\)/g, "$1")
+    .replace(/["""\u201C\u201D]/g, "");
+}
+
+/** Find sections whose titles are mentioned in the text. */
+function findMentionedSections(
+  text: string,
+  sections: PlaybookSection[],
+  excludeSectionId?: string,
+): PlaybookSection[] {
+  const stripped = stripFormatting(text).toLowerCase();
+  return sections.filter((s) => {
+    if (s.id === excludeSectionId) return false;
+    const title = cleanTitle(s.title);
+    // Skip very short titles to avoid false positives
+    if (title.length < 5) return false;
+    return stripped.includes(title.toLowerCase());
+  });
+}
 
 // ── Inline diff card ──────────────────────────────────────────────────
 
@@ -150,9 +201,11 @@ type ChatEditorProps = {
   isEmbedded?: boolean;
   prefillMessage?: string;
   prefillKey?: number;
+  onNavigateToSection?: (sectionId: string) => void;
+  sections?: PlaybookSection[];
 };
 
-export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, prefillMessage, prefillKey }: ChatEditorProps) => {
+export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, prefillMessage, prefillKey, onNavigateToSection, sections: sectionsList }: ChatEditorProps) => {
   const conversationId = useMemo(
     () => sectionId ? `section-${sectionId}` : "dashboard",
     [sectionId]
@@ -265,6 +318,27 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, streamingContent, stagedEdits]);
+
+  // Sections mentioned in the latest assistant response (for the bar below input).
+  // Stored as state so it survives the streamingContent→localMessages transition.
+  const [mentionedSections, setMentionedSections] = useState<PlaybookSection[]>([]);
+
+  // Update mentioned sections whenever streaming content or messages change
+  useEffect(() => {
+    if (!sectionsList || !onNavigateToSection) return;
+
+    // While streaming, scan the in-progress text
+    if (streamingContent) {
+      setMentionedSections(findMentionedSections(streamingContent, sectionsList, sectionId));
+      return;
+    }
+
+    // After streaming, scan the last assistant message
+    const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant" && m.id !== "initial");
+    if (lastAssistant) {
+      setMentionedSections(findMentionedSections(lastAssistant.content, sectionsList, sectionId));
+    }
+  }, [streamingContent, messages, sectionsList, sectionId, onNavigateToSection]);
 
   const handleAccept = async (editId: string) => {
     setProcessingEditId(editId);
@@ -518,6 +592,20 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
           </button>
         </div>
       </div>
+
+      {/* Referenced sections bar */}
+      {mentionedSections.length > 0 && onNavigateToSection && (
+        <div className="border-t border-border px-3 py-2 flex items-center gap-2 overflow-x-auto">
+          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap flex-shrink-0">Go to</span>
+          {mentionedSections.map((s) => (
+            <SectionPill
+              key={s.id}
+              title={cleanTitle(s.title)}
+              onClick={() => onNavigateToSection(s.id)}
+            />
+          ))}
+        </div>
+      )}
     </motion.div>
   );
 };

@@ -369,9 +369,10 @@ Deno.serve(async (req) => {
         "\n\nPlaybook sections (use these IDs when editing):\n" +
         allSections
           .map((s: { id: string; title: string; content: string }) => {
-            // Full content for the section the user is viewing, summary for others
+            // Full content for the dashboard or the section the user is viewing, summary for others
+            const isDashboard = !sectionContext?.sectionId;
             const isCurrent = sectionContext?.sectionId === s.id;
-            const body = isCurrent
+            const body = isDashboard || isCurrent
               ? s.content
               : s.content.slice(0, 800) +
                 (s.content.length > 800 ? "..." : "");
@@ -402,6 +403,7 @@ Guidelines:
 - Use create_section only when the topic truly does not fit any existing section
 - Format all playbook content in clean Markdown: ## headings, bullet points, **bold**, etc.
 - If the user just asks a question, respond normally without using tools
+- When referencing playbook sections, mention them by their exact title so the user can navigate to them easily.
 
 ${sectionContext?.sectionTitle ? `The user is currently viewing: "${sectionContext.sectionTitle}" (ID: ${sectionContext.sectionId})` : "The user is on the dashboard."}
 ${playbookContext}`;

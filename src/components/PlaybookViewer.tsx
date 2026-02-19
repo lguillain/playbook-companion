@@ -9,36 +9,13 @@ import { FileText, Clock, ChevronRight, CheckCircle2, AlertTriangle, XCircle, Pe
 import { toast } from "sonner";
 import { ChatEditor } from "./ChatEditor";
 import { Markdown } from "./Markdown";
+import { MarkdownEditor } from "./MarkdownEditor";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 
-/** Extract the changed region with a few lines of context. */
-function focusedDiff(before: string, after: string, contextLines = 2): { before: string; after: string } {
-  const a = before.split("\n");
-  const b = after.split("\n");
-
-  // Find first differing line
-  let start = 0;
-  while (start < a.length && start < b.length && a[start] === b[start]) start++;
-
-  // Find last differing line (from end)
-  let endA = a.length - 1;
-  let endB = b.length - 1;
-  while (endA > start && endB > start && a[endA] === b[endB]) { endA--; endB--; }
-
-  // Add context
-  const ctxStart = Math.max(0, start - contextLines);
-  const ctxEndA = Math.min(a.length - 1, endA + contextLines);
-  const ctxEndB = Math.min(b.length - 1, endB + contextLines);
-
-  return {
-    before: a.slice(ctxStart, ctxEndA + 1).join("\n"),
-    after: b.slice(ctxStart, ctxEndB + 1).join("\n"),
-  };
-}
 
 const statusIcon = {
   covered: { icon: CheckCircle2, color: "text-success", bg: "bg-success/10" },
@@ -284,9 +261,11 @@ function SectionTreeItem({
 type PlaybookViewerProps = {
   skillFilter?: { skillId: string; skillName: string } | null;
   onSkillFilterChange: (filter: { skillId: string; skillName: string } | null) => void;
+  initialSectionId?: string | null;
+  onInitialSectionConsumed?: () => void;
 };
 
-export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookViewerProps) => {
+export const PlaybookViewer = ({ skillFilter, onSkillFilterChange, initialSectionId, onInitialSectionConsumed }: PlaybookViewerProps) => {
   const { data: sections, isLoading: sectionsLoading, isRefetching } = usePlaybookSections();
   const { data: skillsFramework, isLoading: skillsLoading } = useSkills();
   const updateSection = useUpdateSection();
@@ -437,6 +416,16 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookVie
     }
   }, [skillFilter?.skillId, statusFilter, displaySections]);
 
+  // Navigate to a specific section when triggered from outside (e.g. chat link)
+  useEffect(() => {
+    if (initialSectionId && sections?.some((s) => s.id === initialSectionId)) {
+      setActiveSection(initialSectionId);
+      setExpandedSections((prev) => new Set([...prev, initialSectionId]));
+      setEditing(false);
+      onInitialSectionConsumed?.();
+    }
+  }, [initialSectionId, sections]);
+
   if (sectionsLoading || skillsLoading || !sections || !skillsFramework) {
     return (
       <div className="rounded-xl border border-border bg-card shadow-card flex items-center justify-center h-[calc(100vh-180px)]">
@@ -511,16 +500,14 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookVie
       return;
     }
 
-    const diff = focusedDiff(current.content, editDraft);
-
     try {
       // Directly update the section content
       await updateSection.mutateAsync({ id: current.id, content: editDraft });
-      // Record as auto-approved staged edit (focused diff for audit trail)
+      // Record as auto-approved staged edit (full content for review)
       await createEdit.mutateAsync({
         sectionId: current.id,
-        before: diff.before,
-        after: diff.after,
+        before: current.content,
+        after: editDraft,
         source: "manual",
         autoApprove: true,
       });
@@ -743,12 +730,7 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange }: PlaybookVie
             </div>
 
             {editing ? (
-              <textarea
-                value={editDraft}
-                onChange={(e) => setEditDraft(e.target.value)}
-                className="w-full h-[calc(100%-80px)] min-h-[300px] rounded-lg border border-border bg-muted/30 p-4 text-sm text-foreground font-mono leading-relaxed resize-none outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
-                autoFocus
-              />
+              <MarkdownEditor markdown={editDraft} onChange={setEditDraft} />
             ) : (
               <Markdown>{current.content}</Markdown>
             )}
