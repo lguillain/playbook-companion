@@ -40,11 +40,11 @@ const Index = () => {
 
       <AppHeader activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-[1600px] mx-auto px-6 py-8">
         {activeTab === "dashboard" && (
           <div className="space-y-5">
             <HealthScore activeFilter={statusFilter} onFilterChange={(f) => setStatusFilter(f === statusFilter ? null : f)} />
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-5 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_480px] gap-5 items-start">
               <SkillsFramework onFillGap={handleFillGap} statusFilter={statusFilter} />
               <div className="lg:sticky lg:top-20">
                 <ChatEditor onNavigateToSection={handleNavigateToSection} sections={sections} />
