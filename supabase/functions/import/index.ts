@@ -1,14 +1,12 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { splitIntoSections } from "../_shared/split-sections.ts";
+import { scopedDeleteByProvider } from "../_shared/scoped-delete.ts";
 import { env } from "../_shared/env.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -160,17 +158,19 @@ RULES:
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Clear existing data for this user
-    await adminClient.from("section_skills").delete().eq("user_id", user.id);
-    await adminClient.from("staged_edits").delete().eq("created_by", user.id);
-    await adminClient.from("chat_messages").delete().eq("created_by", user.id);
-    await adminClient.from("playbook_sections").delete().eq("user_id", user.id);
+    // Clear existing sections for this provider only (preserves other sources)
+    const sectionProvider = provider === "taskbase" ? "taskbase" : "pdf";
+    await scopedDeleteByProvider(adminClient, user.id, sectionProvider);
 
-    // Reset all user_skills to "missing"
-    await adminClient
-      .from("user_skills")
-      .update({ status: "missing", last_updated: null, section_title: null })
-      .eq("user_id", user.id);
+    // Determine sort_order offset so new sections come after existing ones
+    const { data: maxRow } = await adminClient
+      .from("playbook_sections")
+      .select("sort_order")
+      .eq("user_id", user.id)
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .single();
+    const sortOffset = maxRow?.sort_order ?? 0;
 
     const today = new Date().toISOString().split("T")[0];
 
@@ -181,8 +181,9 @@ RULES:
           user_id: user.id,
           title: sections[i].title,
           content: sections[i].content,
-          sort_order: i + 1,
+          sort_order: sortOffset + i + 1,
           last_updated: today,
+          provider: sectionProvider,
         });
     }
 

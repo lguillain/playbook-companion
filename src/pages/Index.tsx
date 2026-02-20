@@ -21,6 +21,16 @@ const Index = () => {
   useEffect(() => {
     if (!sectionsLoading && !hasPlaybook) setShowOnboarding(true);
   }, [sectionsLoading, hasPlaybook]);
+
+  // After OAuth redirect with ?connected=confluence, switch to integrations
+  // tab so the IntegrationsPanel can pick it up and show the page picker.
+  // (Only when onboarding isn't shown — OnboardingFlow handles its own redirect.)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("connected") === "confluence" && hasPlaybook) {
+      setActiveTab("integrations");
+    }
+  }, [hasPlaybook]);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   const [skillFilter, setSkillFilter] = useState<{ skillId: string; skillName: string } | null>(null);

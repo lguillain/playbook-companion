@@ -3,799 +3,1077 @@
  * Covers all skill categories so users start with a complete baseline
  * they can customize for their own product/market.
  */
-export const TASKBASE_PLAYBOOK = `# Taskbase Sales Playbook
-
-## How to Use This Playbook
-
-This playbook is your practical guide to selling effectively. It covers who we sell to, what to say, how to run meetings, and how to close deals. Use it as a daily reference — not a one-time read.
-
-Every section is designed to give you actionable guidance. Adapt the examples to your own style, but stay consistent with the messaging and process.
-
----
-
-# ICP & Problem Landscape
-
-## Ideal Customer Profile
-
-**Target companies:**
-- B2B SaaS companies with 50–500 employees
-- Annual revenue between $5M–$100M
-- Have an established sales team (5+ reps)
-- Selling a product with average deal size > $10K ARR
-- Using at least a CRM (Salesforce, HubSpot) and basic sales tools
+export const TASKBASE_PLAYBOOK = `# **1\. Introduction & Purpose**
 
-**Industries we win in:**
-- Software & Technology
-- Financial Services (FinTech)
-- Professional Services
-- Healthcare Technology
+## **1.1. What This Playbook Covers :)**
 
-**Geographic focus:** North America, Western Europe
+This playbook outlines Taskbase’s end-to-end revenue motions—from market targeting and messaging to process, tools, and handoffs. It provides the “what good looks like” across roles and stages so every rep can execute confidently and consistently.
 
-**Company signals that indicate fit:**
-- Recently hired a VP of Sales or CRO
-- Expanding their sales team (job postings for AEs/SDRs)
-- Mentions of "sales enablement" or "revenue operations" in job postings
-- Recently raised Series A–C funding
+* Strategy: ICP, personas, value proposition, and competitive positioning  
+* Execution: outreach templates, discovery flows, demos, proposals, and negotiations  
+* Process: sales stages, MEDDICC/BANT-based qualification, exit criteria, and forecasting discipline  
+* Collaboration: handoffs (MQL→SQL, SDR→AE, AE→CS), ABM with Marketing, and product feedback loops  
+* Enablement: tools, dashboards, coaching, metrics, and continuous improvement
 
-## ICP Fit Assessment & Red Flags
+## **1.2. Who Should Use This Guide**
 
-**Strong fit indicators:**
-- Sales team actively uses a CRM with structured pipeline stages
-- Leadership is data-driven and tracks sales metrics
-- They have (or are building) a sales playbook in some form
-- Pain around onboarding new reps or inconsistent messaging
+* AI Coach: We deploy an AI Coach who teaches all sales functions in their job how to do their job better. The AI Coach will take all the information from that guide. This guide needs to be adjusted to GenAI readability  
+* SDRs: Pipeline creation, prospecting, meeting setting, qualification support  
+* AEs: Discovery, solution mapping, ROI, deal strategy, multi-threading, closing  
+* AMs: Adoption, value realization, renewals, expansion, executive alignment
 
-**Red flags — proceed with caution:**
-- No dedicated sales team (founder-led sales only)
-- Deal size < $5K ARR (ROI is harder to justify)
-- No CRM or pipeline process in place
-- "We don't believe in playbooks" mindset from leadership
-- Company is in cost-cutting mode with hiring freeze
+## **1.3. How to Apply It in Your Daily Workflow**
 
-**Disqualification criteria (walk away):**
-- Fewer than 3 sales reps
-- No budget authority identified after 2 meetings
-- Product is pre-revenue or pre-PMF
-- They want a free tool, not a paid solution
+* Start your day with intent: review your priority accounts, top 10 targets, and next best actions per stage.  
+* Use the stage checklists and exit criteria to progress deals deliberately—don’t skip discovery validation or mutual action plans.  
+* Personalize messaging from persona pain points and industry use cases. Log all activities to maintain CRM hygiene.
 
-## Persona Challenges & Success Metrics
+## **1.4. Playbook Updates & Ownership**
 
-### VP of Sales / CRO
-**Challenges:**
-- New reps take 6+ months to ramp
-- Inconsistent messaging across the team
-- No visibility into what "good" looks like
-- Playbook exists but nobody uses it
+notecddccfa1-e16a-4f28-b33a-6dbfa3a7e62dPlaybook Owner: \[Add Head of Sales\]. Editors: \[Add Sales Enablement\], \[Add RevOps\]. Contributors: \[Add SDR Lead\], \[Add AE Lead\], \[Add AM Lead\].
 
-**Success metrics:**
-- Reduce ramp time from 6 months to 3 months
-- Increase win rate by 10–15%
-- Standardize messaging across all reps
+Playbook Owner: \[Add Head of Sales\]. Editors: \[Add Sales Enablement\], \[Add RevOps\]. Contributors: \[Add SDR Lead\], \[Add AE Lead\], \[Add AM Lead\].
 
-### Sales Enablement Manager
-**Challenges:**
-- Playbook content is scattered across tools (Google Docs, Notion, Confluence)
-- Hard to keep content up to date
-- No way to measure if reps are actually using the playbook
-- Onboarding is ad-hoc and inconsistent
+Update cadence, change control, and feedback loop are defined in Section 15\.
 
-**Success metrics:**
-- Single source of truth for all playbook content
-- Measurable adoption and engagement
-- Faster content updates and distribution
+## **1.5. Glossary of Key Terms**
 
-### Head of Revenue Operations
-**Challenges:**
-- Disconnected tools and processes
-- No standardized methodology across teams
-- Difficulty identifying skill gaps across the organization
+* ICP: Ideal Customer Profile—company-level fit for Taskbase’s value proposition  
+* MQL/SQL: Qualified lead definitions by Marketing and Sales acceptance and criteria alignment  
+* MEDDICC/BANT: Standard qualification frameworks to drive rigor and forecast accuracy
 
-**Success metrics:**
-- Integrated workflow with existing CRM and tools
-- Data-driven coaching recommendations
-- Consistent process adherence
+Here is where we defined all words: [https://taskbase.atlassian.net/wiki/x/BIB9H](https://taskbase.atlassian.net/wiki/x/BIB9H)
 
-## Decision-Maker Roles & Buying Groups
+## **1.6. Sales Organisation & Org Chart**
 
-**Typical buying committee:**
+Teams: SDR, AE, AM/CS, Sales Engineering, Enablement, RevOps. Clear swimlanes for ownership by stage and activity ensure speed and quality.
 
-| Role | Involvement | What they care about |
-|------|------------|---------------------|
-| VP of Sales / CRO | Decision maker | Revenue impact, rep performance, scalability |
-| Sales Enablement | Champion / Evaluator | Ease of use, content management, adoption |
-| Rev Ops | Technical evaluator | Integrations, data, reporting |
-| Finance / CFO | Budget approver | ROI, cost per rep, contract terms |
-| Individual Rep | End user (sometimes consulted) | Ease of use, relevance of content |
+Reference:
 
-**Key insight:** The champion is usually Sales Enablement, but the budget holder is VP of Sales or CRO. Always get both in the room by meeting 2.
+## **1.7. Vision, Mission and Values**
 
-## Use Cases & Proven Value
+Vision: Enable Humanity through learning
 
-### Use Case 1: New Rep Onboarding
-"A Series B SaaS company reduced new rep ramp time from 5.5 months to 2.5 months by giving every new hire a structured, interactive playbook on day one."
+Mission:
 
-### Use Case 2: Messaging Consistency
-"A 40-person sales team went from 15 different elevator pitches to one unified message framework. Their demo-to-close rate improved by 22%."
+* Values: Customer impact, ownership, clarity, speed, integrity  
+* Sales principles: Coachable mindset, data-driven decisions, and crisp communication
 
-### Use Case 3: Playbook Modernization
-"A VP of Sales had a 90-page PDF playbook that nobody read. After migrating to an interactive format, weekly playbook engagement went from 2% to 68% of the team."
+# **2\. Ideal Customer Profile (ICP) & Buyer Personas**
 
-### Use Case 4: Skill Gap Analysis
-"A CRO discovered that 80% of their team couldn't handle pricing objections effectively. Targeted coaching on that single skill improved average deal size by 18%."
+## **2.1. Company-Level Criteria (ICP)**
 
----
+| Criteria | Summary |
+| :---- | :---- |
+| Size | 10-100 sales employees (Scale-up) (Hint for LinkedIn: You have to create an Account list first in order to filter for number of salespeople) |
+| Market | 1st prio: Patrick’s followers 2nd prio: DACH, UK, BENELUX, Nordics, Spain, France, US |
+| Industry (LinkedIn Categories) | The most innovative ones: Software Development (SaaS) IT & Services Technology companies (Fintech, Payments {e.g. Stripe}, HR Tech, etc.) |
+| Necessary factors | \- BtoB Sales \- Product sales, NOT Service sales |
+| Important factors that increase challenge | \- Repeatable sales process \- Remote work focused \- A lot of On-boardings (Growth of sales department \>10% or high fluctuation) \- A lot of Junior Sales reps \- Implemented a new framework recently \- International organisation with different languages spoken (because reps in other languages usually get less coaching) |
+| Factors that make the sale weaker | \- They are selling through resellers and have no direct sales |
+| Triggers overall (LinkedIn, TechCrunch, etc.) | \- Funding round (carefully use that one) \- Growing sales team / Hiring salespeople Open sales positions \- Remote work advocates \- Coaching advocates |
+| Technolographics | \- CRM: Salesforce or Hubspot \- Chat: Slack, MS Teams or Google Chat \- Already use a recording tool |
+| Language Chat | Output \- English \- German |
 
-# Value Proposition & Messaging
+## **2.2. Segmenting by Industry, Size & Geography**
 
-## Core Value Proposition
+Prioritize verticals with repeatable wins and clear pains (e.g., SaaS, Professional Services, Fintech). Segment by headcount, ACV potential, and regions where we can support timezone, language, and compliance requirements.
 
-**One-liner:** We help sales teams turn their playbook into a living tool that reps actually use — so every rep sells like your best rep.
+## **2.3. Key Buyer Personas, Roles and Challenges/ Use cases**
 
-**Elevator pitch (30 seconds):**
-"Most sales teams have a playbook somewhere — a PDF, a Notion doc, a Confluence page. The problem is nobody reads it, it's always out of date, and there's no way to know if your team is actually following it. We turn that static document into an interactive, always-current guide that identifies skill gaps and helps reps improve where it matters most."
+| Title | CEO | CRO / Head of Sales / VP of Sales | Sales Enablement Manager / Director of Sales Enablement |
+| :---- | :---- | :---- | :---- |
+| **Buyer Persona** | Economic Buyer | Economic Buyer / Champion | Champion |
+| **Challenges we solve for them** | \- Behind with revenue \- Drive new strategy with salespeople faster \- Needs to have arguments for the Board in case salespeople are not reaching targets \- Show the board they train and develop their people \- More reliable forecasting and better growth plan \- There is always a small doubt that salespeople are not good enough. Erase that doubt. | \- Being able to report skill development to their boss \- Being able to cancel out “lack of development” as a reason for not reaching the growth targets \- Faster implementation of new sales methodology, changes in SalesPlaybook and new product developments \- Transparency of training and very structured approach to coaching \- Alignment of sales organisation to the same methodologies. \- Reduce coaching costs over the year. \- Reliable forecasting \- Long sales cycles: Ramp up measurement of sales reps in case they did not close a deal yet. You can see their skills. | \- Deliver on Upskilling without much additional costs or invested hours. \- Invoke changes of behaviour thanks to repetitive coachings. (People change behaviour if reminded all the time or with a very intense one-time coaching) \- Reduce coaching costs over the year with a stronger impact on changing behaviour. \- Instead of coaching internally (resources\!) have AI do it. \- Individual coaching for every single rep with an evolving skill map. \- Middle-managers are not skilled enough to give trainings. |
+| **Impact of not solving challenges** | \- Faster growth \- Selling of new product / features much faster \- Outpace competitors, increase win rate \- Peace of mind | \- More revenue \- Keep their job (because they can show progress) \- Peace of mind \- Ramp time reduced by 20% \- Forecasting more accurate. |  |
+| **Goals** |  | \#\#\#\# **1\. Revenue Growth & Expansion** \- Achieve/exceed annual revenue targets \- Increase deal size (upselling/cross-selling) \- Acquire new customers \- Expand market share \#\#\#\# **2\. Team Optimization & Development** \- Increase sales efficiency (processes, tools) \- Continuous coaching & training \- Shorten sales cycles \- Retain and motivate talent \- Set clear goals & expectations |  |
 
-**Value pillars:**
-1. **Living playbook** — Not a static document. Always current, always accessible.
-2. **Skill gap visibility** — See exactly where each rep needs to improve.
-3. **Faster ramp** — New reps get up to speed in weeks, not months.
-4. **Consistent execution** — Every rep follows the same proven process.
+## **2.4. Decision-Making Dynamics & Buying Committees**
 
-## Persona-Specific Messaging
+Buying groups typically include economic buyer (CRO/CFO), technical approver (RevOps/IT), champions (Sales Managers/Directors and Sales Enablement Directors), and users (SDRs/AEs). Multi-thread early, co-create business case (for \>50k deals), and align on procurement steps.
 
-### For VP of Sales / CRO:
-"You've invested in building a playbook, but how do you know your team is following it? We give you visibility into skill gaps across your team and help every rep execute like your top performer."
+# **3\. Product Overview & Value Proposition**
 
-### For Sales Enablement:
-"You're spending hours maintaining playbook content across scattered docs. We give you one place to manage everything, with built-in analytics so you can see what's working and what's not."
+## **3.1. Core Concept of Taskbase**
 
-### For Rev Ops:
-"We integrate with your existing stack and give you data on process adherence and skill coverage — so you can make coaching recommendations based on evidence, not gut feel."
+### **3.1.1 What Taskbase Is**
 
-## Pitch Scripts
+* **Taskbase is an AI coaching and learning platform for sales teams.**  
+* **It learns directly from real sales interactions, not from hypothetical inputs.**  
+* **It builds a dynamic skill profile for each rep based on observed behavior.**
 
-### Cold call opener:
-"Hi [Name], this is [Your Name] from Taskbase. I'm reaching out because I noticed you're scaling your sales team — congrats on the growth. Quick question: how are you onboarding new reps right now? Do they have a structured playbook to follow, or is it more ad-hoc?"
+### **3.1.2 How Taskbase Learns**
 
-### Email sequence — first touch:
-Subject: Your playbook is probably a PDF nobody reads
+* **Input sources: cold calls, emails, CRM updates, Slack/Teams/Google Chat interactions with the AI coach.**  
+* **Taskbase continuously analyzes these interactions to identify skills and gaps.**  
+* **The skill profile evolves as reps improve or change behavior.**
 
-"Hi [Name],
+### **3.1.3 Skill Profile Components**
 
-I talk to sales leaders every week who tell me the same thing: they have a playbook, but their reps don't use it.
+**Taskbase evaluates skills across areas such as:**
 
-The usual reasons: it's out of date, it's buried in a doc somewhere, and there's no way to know if anyone's actually reading it.
+* **Cold calling**  
+* **Cold messaging**  
+* **Discovery**  
+* **Demo execution**  
+* **Objection handling**  
+* **Deal urgency**  
+* **Follow-up and qualification**  
+* **General communication effectiveness**
 
-We help teams like [similar company] turn their playbook into something reps open every day. Their ramp time dropped by 50%.
+# **3.2. Proactive Coaching**
 
-Worth a 15-minute chat?"
+### **3.2.1 How Proactive Coaching Works**
 
-### LinkedIn message:
-"Hi [Name] — saw you're growing the sales team at [Company]. Curious: how are you handling playbook and onboarding for new reps? We've helped similar teams cut ramp time in half. Happy to share how if you're interested."
+* **After a rep completes a sales action (e.g., a cold call), Taskbase checks the interaction against the sales playbook.**  
+* **The AI proactively messages reps in Slack, Teams, or Google Chat.**  
+* **Example trigger message: “I listened to your opener—want feedback?”**
 
-## Objection Handling Foundations
+### **3.2.2 Adaptive Feedback**
 
-**Framework: Acknowledge → Clarify → Respond → Redirect**
+* **Feedback adjusts to the rep’s current skill level.**  
+* **If a rep implements changes, Taskbase registers this behavior as learning.**  
+* **This creates a constant loop: action → feedback → improvement → profile update.**
 
-When handling objections, follow this pattern:
-1. **Acknowledge** — Show you heard them. "That's a fair concern."
-2. **Clarify** — Make sure you understand. "Can you tell me more about what's driving that?"
-3. **Respond** — Address with evidence or reframe. Use customer stories when possible.
-4. **Redirect** — Move the conversation forward. "Given that, would it make sense to..."
+# **3.3. Reactive Selling Support (Knowledge Retrieval)**
 
-**Key principle:** Objections are buying signals. They mean the prospect is engaged enough to push back. Never get defensive.
+### **3.3.1 How Reps Use Taskbase on Demand**
 
-## Product Capabilities & Customer Outcomes
+**Examples of questions reps can ask taskbase:**
 
-| Capability | What it does | Customer outcome |
-|-----------|-------------|-----------------|
-| Playbook import | Brings in content from Notion, Confluence, PDF | No starting from scratch — use what you have |
-| Skill mapping | Maps playbook sections to sales skills framework | See exactly what's covered and what's missing |
-| Gap analysis | Identifies missing or weak playbook areas | Prioritize what to fix first |
-| AI coaching | Suggests improvements for weak sections | Better content without hiring a consultant |
-| Section editing | Edit and improve playbook content in-app | Keep the playbook current and relevant |
-| Health score | Overall playbook quality metric | Track improvement over time |
+* **“Who fits our ICP?”**  
+* **“Which customer is a relevant reference for a fintech prospect?”**  
+* **“What’s the recommended objection response for pricing pushback?”**
 
----
+### **3.3.2 Retrieval Source**
 
-# Sales Vocabulary & Buyer Language
+* **Answers are grounded in the company’s sales playbook and product knowledge.**  
+* **The same engine that coaches reps also retrieves operational guidance.**
 
-## Internal Sales Terminology
+# **3.4. Content Maintenance & Data Requirements**
 
-| Term | Definition |
-|------|-----------|
-| Health score | Percentage of skills covered in the customer's playbook |
-| Skill gap | A sales skill that's missing or poorly covered in the playbook |
-| Coverage | How well a playbook section addresses a specific skill |
-| Section | A discrete topic area within the playbook |
-| Ramp time | Time from new rep hire to full productivity |
+### **3.4.1 Content Updates**
 
-## Buyer-Facing Terminology
+* **Playbook updates (messaging, objections, ICP shifts) must flow into Taskbase to maintain coaching accuracy.**  
+* **New patterns from calls should be added to the playbook regularly.**
 
-Use language the buyer uses, not our internal jargon:
+### **3.4.2 Call Data**
 
-| We say internally | Say this to buyers |
-|-------------------|-------------------|
-| Skill mapping | "We analyze your playbook to find gaps" |
-| Health score | "Your playbook quality score" |
-| Import pipeline | "We bring in your existing playbook content" |
-| Section analysis | "We break down your playbook by topic" |
+* **Taskbase does not record calls.**  
+* **It processes call recordings from external platforms.**  
+* **Any standard recording tool is sufficient as long as the data is accessible.**
 
-## Terms to Avoid & Correct Usage
+### **3.4.3 Language Support**
 
-**Avoid:**
-- "AI-powered" (overused, triggers skepticism) → Say "smart analysis" or just describe what it does
-- "Disruptive" → Say "different approach" or "better way"
-- "Synergy" → Be specific about what integrates with what
-- "Best-in-class" → Use specific metrics or customer quotes instead
-- "Paradigm shift" → Just explain the change plainly
+* **Highest coaching quality is currently available in English and German.**  
+* **Languages requiring specific phrasing (e.g., cold calling) benefit most from these two.**
 
-**Correct usage examples:**
-- Don't say: "Our AI-powered platform disrupts sales enablement"
-- Do say: "We analyze your playbook and show you exactly which skills your team needs to work on"
+# **3.5. Integrations**
 
-## Key Industry Terms
+### **3.5.1 CRM & Data Integrations**
 
-Know these terms — your buyers use them daily:
+* **Salesforce**  
+* **HubSpot**  
+* **KickScale**  
+* **Call-recording tools (via standard APIs)**
 
-- **Sales enablement:** The process of providing reps with the tools, content, and training they need to sell effectively
-- **Revenue operations (Rev Ops):** The function that aligns sales, marketing, and CS operations
-- **MEDDIC/MEDDPICC:** Popular qualification frameworks (Metrics, Economic Buyer, Decision Process, Decision Criteria, Identify Pain, Champion, Competition)
-- **BANT:** Budget, Authority, Need, Timeline — classic qualification framework
-- **ACV/ARR:** Annual Contract Value / Annual Recurring Revenue
-- **Stage progression:** Movement of a deal through pipeline stages
-- **Win rate:** Percentage of opportunities that close-won
+### **3.5.2 Communication Integrations**
 
-## Correct Language Examples
+* **Slack**  
+* **Microsoft Teams**  
+* **Google Chat**
 
-**In a discovery call:**
-- ✅ "What does your onboarding process look like for new reps today?"
-- ❌ "Do you have a playbook?" (too direct, might get a defensive "yes" even if it's bad)
+### **3.5.3 Leadership Dashboard**
 
-**When discussing value:**
-- ✅ "Teams like yours typically see ramp time drop by 40-50%"
-- ❌ "We guarantee faster ramp times" (never guarantee specific outcomes)
+* **Real-time view of each rep’s skill development.**  
+* **Shows improvement, stagnation, or decline.**  
+* **Helps identify root causes of missed quota without reviewing every call.**
 
-**When talking about competition:**
-- ✅ "The approach we take is different because we start with what you already have"
-- ❌ "Competitor X is terrible because they make you start from scratch"
+# **3.6. Personas & Use Cases**
 
----
+### **3.6.1 Sales Reps**
 
-# Qualification & Risk Assessment
+**Primary benefits:**
 
-## Qualification Methodology
+* **Day-to-day skill development based on actual work.**  
+* **Continuous feedback instead of quarterly trainings.**  
+* **Instant reactive answers (ICP, messaging, objections, references).**  
+* **Support for cold calling, messaging, discovery, demos, and more.**
 
-We use a simplified MEDDIC approach adapted for our sales motion:
+### **3.6.2 Sales Leaders / Managers**
 
-| Element | Question to answer | Minimum bar |
-|---------|-------------------|-------------|
-| **Metrics** | What measurable outcome do they want? | Can articulate at least one (ramp time, win rate, etc.) |
-| **Economic Buyer** | Who signs the check? | Identified by name and title |
-| **Decision Process** | How do they evaluate and buy? | Understand steps and timeline |
-| **Decision Criteria** | What matters most to them? | Know their top 3 priorities |
-| **Identified Pain** | What's broken today? | Can describe a specific, current problem |
-| **Champion** | Who is selling internally for us? | Have an engaged internal advocate |
+**Primary benefits:**
 
-## ICP Fit in Qualification
+* **Visibility into skill gaps rather than only activity metrics.**  
+* **Insight into discovery, demo quality, objection handling, and more.**  
+* **Faster identification of issues when reps miss quota.**  
+* **Less manual call review.**
 
-Score each deal on ICP fit early (in discovery or first call):
+### **3.6.3 Enablement Teams**
 
-**A-tier (pursue aggressively):**
-- 50-500 employees, $10M+ revenue
-- Established sales team with 10+ reps
-- Active sales enablement function
-- Budget confirmed or likely
+**Primary benefits:**
 
-**B-tier (pursue with conditions):**
-- 20-50 employees or 500-1000 employees
-- Sales team of 5-10 reps
-- No dedicated enablement but VP Sales is engaged
-- Budget TBD but interest is genuine
+* **Scalable daily coaching without increasing human workload.**  
+* **AI handles repetitive coaching.**  
+* **Enablement focuses on playbook quality, objection monitoring, and updates.**  
+* **Continuous learning replaces workshop-only models.**
 
-**C-tier (qualify harder before investing time):**
-- <20 employees or >1000 (different motion needed)
-- Very early sales team (<5 reps)
-- No clear champion
-- "Just exploring" with no timeline
+### **3.6.4 CROs / Revenue Executives**
 
-## Risk Detection Guidance
+**Primary benefits:**
 
-**Watch for these during discovery and demo:**
+* **Scalable coaching without proportional headcount growth.**  
+* **Predictable cost structure per rep license.**  
+* **Standardization of high-quality coaching across the organization.**  
+* **Faster onboarding and ramp time.**
 
-- **"We need to check with..." (unnamed person)** → Decision process is unclear. Ask: "Can you walk me through who else would need to weigh in?"
-- **Multiple reschedules** → Low priority or champion losing interest. Address directly.
-- **"Can you just send a proposal?"** → They may be comparison shopping. Push for a meeting to present it live.
-- **No access to economic buyer by meeting 3** → Deal may stall. Escalate with champion.
-- **"We're also looking at [competitor]"** → Normal, but ask what criteria they're evaluating on.
+# **3.7. Differentiating Value (USPs)**
 
-## Deal Health Flags
+### **3.7.1 Personalized, Contextual Coaching**
 
-**Green flags (healthy deal):**
-- Champion actively engaged and responsive
-- Multiple stakeholders involved
-- Clear timeline and budget range discussed
-- They're sharing internal context freely
-- Next steps are always confirmed
+* **Feedback is based on the rep’s latest activity.**  
+* **Not generic modules; real situational guidance.**  
+* **Feels like a personal coach reacting in real time.**
 
-**Yellow flags (needs attention):**
-- Communication slowing down
-- Rescheduled meetings
-- Only one person engaged
-- "We need more time" without specifics
-- Asking for heavy discounts early
+### **3.7.2 Skill Visibility for Leaders**
 
-**Red flags (deal at risk):**
-- Gone dark for 2+ weeks
-- Champion left the company
-- "We decided to build internally"
-- No budget allocated and no plan to get it
-- They won't introduce you to the economic buyer
+* **Converts qualitative selling behavior into measurable skill insights.**  
+* **Removes the need for leaders to manually diagnose performance gaps.**
 
-## True Requirements vs Nice-to-Haves
+### **3.7.3 Scalable Enablement**
 
-During qualification, separate what they actually need from wish-list items:
+* **Automates repetitive coaching interactions.**  
+* **Frees enablement to work on strategy and content.**  
+* **Works with thousands of reps simultaneously.**
 
-**Ask:** "If you could only solve one problem with a tool like this, what would it be?"
+### **3.7.4 Expert Source Content**
 
-**True requirements** (deal-breakers if missing):
-- Must integrate with their CRM
-- Must support their existing content (Notion/Confluence/PDF)
-- Must be usable by reps without training
-- Must have a way to measure adoption
+* **Trained on advanced sales methodologies and proven talk tracks.**  
+* **Can incorporate expert content from Patrick or external creators.**  
+* **Allows companies to adopt frameworks from top industry voices.**
 
-**Nice-to-haves** (want but won't kill the deal):
-- Custom branding
-- Advanced analytics
-- API access
-- SSO (unless enterprise)
+### **3.7.5 Proactive Coaching as a Differentiator**
 
----
+* **Taskbase reaches out automatically.**  
+* **Reps don’t need to remember to ask for help.**  
+* **Creates continuous learning embedded in daily workflow.**
 
-# Sales Process & Meeting Sequences
+# **3.8. Ecosystem Benefits**
 
-## Sales Process Overview
+### **3.8.1 KickScale Integration**
 
-| Stage | Goal | Key activities | Typical duration |
-|-------|------|---------------|-----------------|
-| 1. Prospecting | Generate interest | Cold outreach, inbound follow-up | Ongoing |
-| 2. Discovery | Understand their world | Discovery call, stakeholder mapping | 1-2 weeks |
-| 3. Demo | Show the solution | Tailored demo, technical validation | 1 week |
-| 4. Proposal | Present the deal | Pricing, business case, negotiation | 1-2 weeks |
-| 5. Close | Get the signature | Contract review, final objections | 1-2 weeks |
+* **KickScale highlights common objections and struggle points.**  
+* **Taskbase uses these insights to update the playbook after human validation.**  
+* **Ensures coaching aligns with real customer conversations.**
 
-**Average sales cycle:** 30-45 days for mid-market, 60-90 days for enterprise.
+### **3.8.2 Expert Content Ecosystem**
 
-## Stage Exit Criteria
+* **Companies can inject methodologies from influencers, trainers, or frameworks.**  
+* **AI coach trains reps based on selected content.**
 
-**Prospecting → Discovery:**
-- Prospect agreed to a meeting
-- Basic ICP fit confirmed (company size, industry)
-- Key contact identified
+### **3.8.3 Automatic Update Loop**
 
-**Discovery → Demo:**
-- Pain identified and articulated by the prospect
-- At least one success metric discussed
-- Champion identified
-- ICP fit confirmed (A or B tier)
+* **New objections, fresh messaging, and new patterns flow into the playbook.**  
+* **Taskbase updates coaching automatically once the playbook changes.**  
+* **Keeps learning relevant and aligned with current market realities.**
 
-**Demo → Proposal:**
-- Demo completed with positive feedback
-- Economic buyer identified (even if not yet met)
-- Decision timeline discussed
-- No blocking technical requirements
+### **3.8.4 Low-Friction Integration Philosophy**
 
-**Proposal → Close:**
-- Proposal delivered and reviewed
-- All decision makers have seen the solution
-- Pricing discussed and within range
-- Legal/procurement process started
+* **Taskbase lives inside existing workflows.**  
+* **No new UI required.**  
+* **Designed as an “intelligent layer” across the sales tech stack.**
 
-## Meeting Sequences
+## **3.5. Customer Stories & Proof Points**
 
-### Meeting 1: Discovery Call (30 min)
-**Agenda:**
-1. Introductions and context (5 min)
-2. Their current state and challenges (15 min)
-3. Quick overview of our approach (5 min)
-4. Next steps (5 min)
+[https://taskbase.atlassian.net/wiki/x/AgCKS](https://taskbase.atlassian.net/wiki/x/AgCKS)
 
-**Goal:** Understand their pain, confirm ICP fit, earn the demo.
+# **4\. Sales Process Overview**
 
-### Meeting 2: Tailored Demo (45 min)
-**Agenda:**
-1. Recap discovery findings (5 min)
-2. Tailored demo based on their pain points (25 min)
-3. Q&A and objection handling (10 min)
-4. Next steps — introduce economic buyer (5 min)
+## **4.1. Sales Stages, Required Activities per Stage & Exit Criteria**
 
-**Goal:** Show them what "good" looks like for their specific situation.
+Use stage checklists to prevent slippage. Each stage requires validated pains, stakeholders, next steps, and calendarized actions. Tie every commit to a mutual action plan.
 
-### Meeting 3: Business Case / Proposal Review (30 min)
-**Agenda:**
-1. Recap value and fit (5 min)
-2. Walk through proposal and pricing (15 min)
-3. Address concerns (5 min)
-4. Discuss timeline and next steps (5 min)
+|  | Meeting Booked | 1: Problem/ Use Case Agreement | 2: Priority Agreement | 3: Solution/Value Agreement | 4: Power Agreement | 5: Commercial Agreement |
+| :---- | :---- | :---- | :---- | :---- | :---- | :---- |
+| **Seminal Question:** The question you are trying to answer | Do we have a meeting booked with an ICP? | Do they have a problem we can solve? Do they want to achieve something they cannot achieve without us? | Are the problems big enough to prioritize solving? Can we get a good business case? | Is this solution worth putting money into? Can our solution solve their problem thoroughly? | Does the Economic Buyer agree to Solution and Problem? | Are you gonna buy this thing? |
+| **Exit Criteria:** Proof that you’ve answered the question | \- Accepted by Sales Rep/ Account Executive \- Match of LinkedIn profile to our ICP and Persona criteria | \- 2-3 biz initiatives (not problems, projects) \- Do they understand the org structure? (3-2-1) | \- Quantified business initiatives | \- They think our solution is good enough to solve the problem. | \- Approved proposal above the line \- Required capabilities \- Implementation date \- MAP in place | \- Executed contract \- Notes to post-sales |
+| **People Involved:** Who should answer that question | Director, Sales or Enablement CRO / VP Sales | Director, Sales or Enablement, VP Sales | Director, Sales or Enablement, VP Sales (or \++) | Director, Sales CRO / VP Sales IT / Finance | CRO / VP Sales | Director, Sales CRO / VP Sales IT / Finance Legal |
+| **Tools:** Things you can do to get the answer | \- Cold Calls \- Cold emails \- Social Selling \- LinkedIn Messages \- Sequences | \- Discovery Call \- Problem Hypothesis \- Audits / Comparisons \- Demo (Before / After) | \- Value engineering (ROI calculator) \- Super detailed demos (before vs after) \- Workflow interviews / reverse demos \- Case study | \- Super detailed demos (before vs after) \- Pilots & Trials \- Business cases / ROI studies | \- Champion 1:1s \- Exec meetings \- Case studies | \- Proposal \- Post-sales people \- Discounts & negotiation |
+| **Risk Criteria:** How well you’ve achieved the exit criteria | 🟢CRO 🟡VP Sales 🟠Director Enablement 🛑Director Sales | 🟢Initiative 🟡Problem 🟠Pain 🛑No Pain | 🟢Massive Metrics 🟡Clear Metrics 🟠Not Meaningful 🛑No Metrics | 🟢Differentiated Value Clear 🟡Some differentiated value 🟠Competitors in deal 🛑Local competitor they already talk to | 🟢We met Economic Buyer 🟡Our Champion is same level as EB 🟠Champion below EB 🛑Champion two below EB | 🟢They're Driving 🟡We're Driving 🟠Falling Behind 🛑Nothing Started |
 
-**Goal:** Get verbal agreement and start procurement.
+# **5\. Qualification Framework**
 
-## Process Best Practices & Examples
+## **5.1. Overview of Qualification Methods used**
 
-**Always:**
-- Send a recap email within 2 hours of every meeting
-- Confirm next meeting before ending the current one
-- Share something valuable (insight, benchmark, article) between meetings
-- Keep your CRM updated same-day
+Primary: MEDDICC for enterprise/mid-market; BANT for high-velocity SMB; SPICED-style discovery for problem depth. Choose depth by ACV and complexity.
 
-**Example recap email:**
-"Hi [Name], thanks for the great conversation today. Here's what I took away:
-- Your main challenge is [X]
-- You're looking for [Y] outcome
-- Next step: [specific action and date]
+## **5.2. Discovery Question Library**
 
-Let me know if I missed anything. Looking forward to [next meeting]."
+* Impact: What happens if this problem persists another two quarters?  
+* Process: How do stage changes, approvals, and forecasting work today?  
+* Metrics: Which KPIs define success for you and your leadership?
 
-## Common Mistakes & What Good Looks Like
+## **5.3. How to Score and Disqualify Opportunities**
 
-| Mistake | What good looks like |
-|---------|---------------------|
-| Demoing without discovery | Always do discovery first — even if they insist on "just a quick demo" |
-| Talking to only one person | Get 2+ stakeholders involved by meeting 2 |
-| Sending a proposal without presenting it | Always walk through the proposal live |
-| Letting deals go dark | Follow up within 48 hours if you don't hear back |
-| Discounting too early | Understand their budget first, then discuss pricing |
-| Skipping the recap email | Send one after every single meeting |
+Use a lead/deal score blending ICP fit, intent, pain severity, stakeholder access, and timing. Disqualify respectfully when lack of fit, authority, or compelling event is evident; leave the door open for nurture.
 
----
+## **5.4. Qualification Tools and Templates**
 
-# Discovery & Customer-Centric Questioning
+In deal reviews, we use a specific framework so that we can focus on what really matters in every deal. The goal of deal reviews:
 
-## Company-Specific Discovery Questions
+* Mitigate the risks we identify by talking through them  
+* Discover questions we still need to ask our buyer so that we can better evaluate the deal
 
-**Understanding their current state:**
-- "Walk me through how a new rep gets up to speed today. What's the process?"
-- "Where does your sales playbook live right now? Is it one doc or scattered across tools?"
-- "When was the last time your playbook was updated?"
-- "How do you know if your reps are actually following the playbook?"
+Here are categories (5Ps) and the respective questions you want to have an answer for before going into a deal review meeting:
 
-**Understanding the impact:**
-- "What happens when a rep goes off-script? How often does that happen?"
-- "How long does it take a new rep to hit quota today?"
-- "If you could wave a magic wand and fix one thing about your sales team's execution, what would it be?"
+### **5Ps Framework for Deal Reviews:**
 
-## Stakeholder Mapping Questions
+The 5Ps Framework to use for Deal Reviews760Pain
 
-- "Besides yourself, who else cares about how the sales team is ramping and executing?"
-- "Who would need to sign off on a purchase like this?"
-- "Is there a Rev Ops or enablement team involved in evaluating tools?"
-- "How have you made similar decisions in the past? What was the process?"
+* Do they already have a concrete project with a concrete goal?  
+* What is the (quantifiable) business pain we are solving for the customer?  
+* What is the impact of that pain (if not solved)?  
+* What are the criteria they want to work with a company?  
+* Where is the information coming from?
 
-## Discovery-to-Value Connection
+Priority
 
-Map what you learn in discovery to the value you present in the demo:
+* Metrics are large or small?  
+* Can the project be tied to a business initiative?
 
-| They say... | You show... |
-|------------|------------|
-| "Our playbook is a 90-page PDF" | Import their PDF and show it analyzed in minutes |
-| "New reps take 6 months to ramp" | Skill gap analysis showing exactly where to focus |
-| "We don't know if reps follow the process" | Health score and coverage metrics |
-| "Content is spread across Notion and Confluence" | Multi-source import bringing everything together |
-| "Our messaging is inconsistent" | Messaging section with clear talk tracks |
+Power
 
-## True Requirements Probing
+* Who has the authority to release the funds and who will sign the deal?  
+* Who is the true economic buyer?  
+* Do we know some or have connections to some people who are high in the organisation?  
+* Where is the information coming from?
 
-- "You mentioned you need [X]. Help me understand — what happens if you don't have that?"
-- "If [X feature] wasn't available, would that be a deal-breaker or just a preference?"
-- "What's the minimum you need to see in a tool to feel confident moving forward?"
-- "Which of these capabilities would have the biggest impact on your team tomorrow?"
+People
 
-## Decision Process Uncovering
+* Who is your champion? How do you know they are a champion?  
+* Who are the lend of people we are working with on this deal? In what way is each involved? What does each care about?  
+* Where is the information coming from?
 
-- "What does your evaluation process typically look like for a tool like this?"
-- "Are there other solutions you're comparing us against?"
-- "What's your ideal timeline for having something in place?"
-- "Is there a budget allocated for this, or would we need to make the case for it?"
-- "Who else would need to see a demo before you could move forward?"
+Process
 
----
+* What steps do they as a company need to make to get to a buying decision?  
+* Is the close date of that opportunity set into stone and discussed with the prospect?  
+* Do we have something in place (Compelling event, specific customer urgency, pilot expiration, or other) that will drive the timeline?  
+* Have we asked the client if they’ve thought about an appropriate range of investments to solve their problem? How do they plan on funding this?  
+* Do we understand the decision criteria for the people involved in the decision-making steps?  
+* Are they looking into other competitors as well?  
+* Where is the information coming from?
 
-# Demo & Solution Fit
+## **5.5. Qualification for Expansion or Cross-Sell**
 
-## Demo Storyline & Sequence
+For existing customers, anchor on adoption, value realization, and executive alignment. Score expansion potential by usage breadth, champion influence, and upcoming initiatives.
 
-**The golden rule:** Never demo features. Demo outcomes.
+# **6\. Messaging, Scripts & Talk Tracks**
 
-**Standard demo flow (25 minutes):**
+## **6.1. Cold Outreach Templates (Email, Phone, LinkedIn)**
 
-1. **Set the stage (3 min):** "Based on what you told me, your biggest challenge is [X]. Let me show you how we'd solve that."
+Principles: Personalize to persona pain \+ proof, one CTA, 3–5 sentences, plain language, clear pain in the first line.
 
-2. **Import their world (5 min):** Show importing from whatever source they use (Notion, Confluence, or PDF). Use their actual content if possible, or a similar example.
+## **6.2. Persona-Specific Value Messaging**
 
-3. **Show the analysis (7 min):** Walk through the skill mapping and health score. Highlight gaps that match their stated pain points.
+* CRO: Confident commits via stage governance and risk surfacing  
+* RevOps: Fewer manual audits; enforce hygiene automatically; reliable reporting  
+* Sales Managers: Ready-made deal reviews and coaching with less prep
 
-4. **Demonstrate improvement (5 min):** Show how they'd fill a gap — edit a section, get AI suggestions, see the health score improve.
+## **6.3. Discovery Call Structure**
 
-5. **Connect to outcomes (5 min):** "Imagine every new rep started day one with this. Instead of 6 months to ramp, you're looking at 2-3 months."
+* Align on agenda and outcomes; get consent to ask tough questions and to share context  
+* Probe problem, impact, stakeholders, and timing; quantify pains and define success metrics  
+* Close by booking the next meeting in the call. Never leave without.
 
-## Customer-Specific Demo Examples
+## **6.4. Objection Handling Scripts**
 
-**For a company with a PDF playbook:**
-"I see you have a comprehensive PDF. Let me show you what happens when we import it..." → Import their actual PDF, show the analysis, highlight that 30% of skills might be missing.
+Acknowledge, Accept, Adjust, Ask
 
-**For a company using Notion:**
-"You've got great content in Notion. Let me connect to a similar workspace and show you how it all comes together..." → Show Notion import flow, emphasize that scattered pages become one structured playbook.
+## **6.5. Demo Scripts & Positioning**
 
-**For a company with no playbook:**
-"Starting from scratch is actually an advantage — you get to build it right from day one. Let me show you our template..." → Use the Taskbase template playbook, show how comprehensive it is out of the box.
+𝗧𝗵𝗲 𝗚𝗼𝗹𝗱 𝗦𝘁𝗮𝗻𝗱𝗮𝗿𝗱 𝗗𝗲𝗺𝗼 𝗖𝗵𝗲𝗰𝗸𝗹𝗶𝘀𝘁:
 
-## Solution Fit Assessment
+* Did you kick off with a “What We Heard” slide to recap their top goals and pain points?  
+* Did you check in with new stakeholders to confirm those priorities still hold — and get their lens on it too?  
+* Did you ask how they do it today before jumping into how it could work with your platform?  
+* Did you stick to only the features that directly solve their core use case or pain?  
+* Did you lead with the flashiest, most value-packed feature and build momentum fast?  
+* Did you give a clear “why” before each feature — the business reason they should care?  
+* Did you dig into their internal process and team structure to set up smart multithreading plays?  
+* Did you clearly explain how your product is different — and why that matters to them?  
+* After each feature, did you ask “what was going through your mind as I walked through that?” instead of “any questions?”
 
-Before the demo, rate solution fit on these dimensions:
+10\. Did you lock in the next call live, with a clear reason why it’s valuable and who else should be there?
 
-| Dimension | Good fit | Stretch | Poor fit |
-|-----------|----------|---------|----------|
-| Content source | Uses Notion, Confluence, or has PDFs | Uses a tool we don't integrate with yet | No existing content and no willingness to create |
-| Team size | 5-100 reps | 100-500 reps (need enterprise features) | <5 reps (ROI hard to justify) |
-| Process maturity | Has defined stages and some playbook content | Has a process but it's informal | No process at all |
-| Tech savviness | Comfortable with SaaS tools | Needs hand-holding | Resistant to new tools |
+Intro
 
-## Persona-Based Demo Adaptation
+For many salespeople, a demo is treated as a one-time event in the sales process. The pattern is familiar: run a discovery call, gather some information, then schedule a demo meeting to present the product. This approach has worked in the past — but today’s world looks very different. Buyers are busier, better informed, and have higher expectations.
 
-**For VP of Sales:** Focus on health score, skill gaps across the team, and ramp time impact. Skip technical details.
+In lower-cost deals (say, below $10,000 a year), many buyers can self-educate and purchase without ever needing a demo. They’ll happily watch a pre-recorded product tour or click through an online sandbox. But once deal sizes climb, **personalized demos remain essential.**
 
-**For Sales Enablement:** Focus on content management, import flow, editing experience. Show how easy it is to update and maintain.
+Trümpi’s Substack is a reader-supported publication. To receive new posts and support my work, consider becoming a free or paid subscriber.
 
-**For Rev Ops:** Focus on integrations, data and metrics, process adherence tracking. Show the analytical side.
+And here’s the critical point: if you’re delivering the same generic demo over and over, your role as a salesperson adds little value. In that case, you might as well send a video link. The only advantage left would be the “human factor”—that someone booked time with you and stayed to watch live. But that’s a thin reason for your existence.
 
-**For a mixed audience:** Lead with the business outcome (VP), show the product (Enablement), address technical questions (Rev Ops).
+Great demos, in contrast, are **personalized, dynamic, and context-driven.** They connect directly to the buyer’s situation and pains. They don’t follow a rigid structure — they adapt. And most importantly, they aren’t confined to a single meeting slot on the calendar.
 
-## Risk Areas & Humility
+### **Demos as a Tool, Not Just a Meeting**
 
-**Be honest about what we don't do (yet):**
-- "We're not a replacement for your CRM — we complement it"
-- "Our analytics are focused on playbook coverage, not individual rep performance tracking"
-- "We don't do live call coaching — we help with the preparation and knowledge side"
+Too often, demos are seen only as a fixed stage in the process. But a demo is a **tool** — just like discovery questions, case studies, or proof of value. You can use a demo at any moment if it helps the conversation.
 
-**When they ask about something we can't do:**
-"That's not something we support today. What I'd recommend is [alternative approach]. Would that work for your situation?"
+Imagine you’re ten minutes into a discovery call. The buyer describes a painful, time-consuming process. If you know your solution can cut that process in half, why wait until a later demo? Show them right then. Anchor it in their reality by asking:
 
-Never overpromise. It's better to lose a deal honestly than win one that churns.
+* *Can you see yourself using this?*  
+* *If you did, how much time would it save you exactly?*
 
----
+Suddenly, you’ve moved from features to impact. You’ve built a business case live in the meeting — and you can close that “mini-demo” before pivoting to another use case.
 
-# Objection & Pricing Handling
+This is how modern salespeople should think: not in terms of “demo meeting” versus “discovery meeting,” but in terms of **use cases, tools, and value delivery.**
 
-## Context-Aware Objection Handling
+### **Delivering Value Early**
 
-### "We already have a playbook"
-**Context:** They have content but it's not working.
-**Response:** "That's actually ideal — we're not asking you to start over. We take what you have and make it actionable. Most teams we work with have a playbook; the challenge is that nobody uses it. Can I ask: when was the last time a rep actually opened your playbook?"
+This mindset becomes even more critical in outbound sales. Inbound prospects may happily go through a clean sequence of discovery first, demo second. But outbound prospects have less patience. They didn’t ask to talk to you. If you spend thirty minutes asking questions without showing anything of value, chances are you won’t earn a second meeting.
 
-### "We don't have budget for this"
-**Context:** Budget isn't allocated yet.
-**Response:** "Understood — budget is always a consideration. Let me ask this: what's the cost of one rep taking 6 months to ramp instead of 3? For most teams our size, that's $50-100K in lost productivity. We can help you build the business case if that would be useful."
+That’s why the best sellers learn to **deliver value quickly** — weaving in snippets of demo during the very first call, always tailored to what the buyer has just said.
 
-### "We're evaluating other solutions"
-**Context:** Competitive situation.
-**Response:** "Smart to look at options. What criteria are you evaluating against? I want to make sure we're addressing what matters most to you. What I hear from teams that chose us is that our approach of starting with their existing content — rather than making them build from scratch — is what set us apart."
+### **Yes, There’s Still a Demo Meeting**
 
-### "We can build this internally"
-**Context:** DIY consideration.
-**Response:** "You absolutely could. The question is whether that's the best use of your team's time. Most teams we talk to tried the internal route first — a Google Doc here, a Notion page there — and found that maintaining it became a full-time job. How much time is your enablement team spending on playbook maintenance today?"
+That said, most sales processes still contain a dedicated demo-heavy meeting. This article will cover how to structure and run those demos for maximum impact. But keep this perspective in the back of your mind:
 
-### "This seems too simple / not enterprise enough"
-**Context:** Enterprise buyer wants complexity.
-**Response:** "Simplicity is actually intentional. The #1 reason playbook tools fail is because they're too complex for reps to use daily. We focus on making something your team will actually open every day. That said, let me show you the analytics and customization options — there's depth beneath the simplicity."
+* A demo is not confined to one meeting.  
+* A demo is a flexible tool.  
+* And the best demos don’t show “everything” — they show what matters most to the buyer.
 
-## Persona-Specific Objection Patterns
+With that foundation set, let’s dive deeper into how to design, deliver, and master sales demos.
 
-**VP of Sales objections tend to be about:** ROI, time to value, will reps actually use it.
-→ Respond with metrics, customer stories, and adoption data.
+Chapter 1: How to Structure a Demo
 
-**Enablement objections tend to be about:** Ease of content management, migration effort, feature gaps.
-→ Respond with product demos, import flow, and roadmap.
+A demo is not about showing everything your product can do. It’s about showing the *right things* in the *right order* so that the buyer connects what they see with their real challenges and goals. Whether you’re running a full demo meeting or dropping a quick demo snippet into a discovery call, the structure is the same.
 
-**Rev Ops objections tend to be about:** Integrations, data security, technical requirements.
-→ Respond with documentation, architecture overview, and reference calls.
+Think of the demo as a sequence of four steps:
 
-## Pricing Question Guidelines
+* **Recap** – Align on what you’ve heard.  
+* **Permission** – Set expectations for the flow.  
+* **Show** – Present the most relevant feature first.  
+* **Ask** – Confirm value and anchor it in their reality.
 
-**When they ask "How much does it cost?" early:**
-"Pricing depends on team size and needs. Before I give you a number, I want to make sure we're solving the right problem — that way I can recommend the right package. Can I ask a few more questions first?"
+This framework ensures your demos are focused, conversational, and tied to business impact — not a product tour. Let’s break it down.
 
-**When presenting pricing:**
-- Always present pricing in context of value, not in isolation
-- Show the cost per rep per month (makes it feel small)
-- Compare to the cost of the problem (slow ramp, lost deals)
-- Offer annual pricing with a discount
+Step 1: Recap What You’ve Heard
 
-**Discount guidelines:**
-- Never discount more than 15% without manager approval
-- Prefer adding value (extended trial, extra onboarding support) over cutting price
-- Annual commitment = standard discount (10-15% over monthly)
-- Multi-year deals can go up to 20% with VP approval
+The first thing you do in a demo is **recap what you understood from the buyer.**
 
-## Top Rep Response Examples
+* In a scheduled demo meeting, recap what came out of your discovery call.  
+* In a quick on-the-spot demo, recap what they just told you in the conversation.
 
-**When a deal is stalling:**
-Top rep: "Hey [Name], I want to be upfront — I noticed we've pushed this meeting twice. I totally understand if priorities have shifted. Can you help me understand where this stands on your end? If the timing isn't right, that's okay — I'd rather know so I can be helpful when it is."
+Don’t just say: *“Let me show you the product.”*  
+Instead say:
 
-**When asked for a deep discount:**
-Top rep: "I hear you on budget constraints. Here's what I can do: if we go with an annual commitment, I can offer [X]% off. But more importantly, let me show you the ROI model — most teams see payback within 60 days based on ramp time reduction alone."
+“From our last call, I understood three main points. First, coaching reps takes a lot of time, and managers can’t scale it effectively. Second, reporting is slow and manual. And third, you’re missing insights into which deals are actually at risk. Does that sound right?”
 
-## Trust Preservation Do's & Don'ts
+Make it **visual.** Put a slide on screen that summarizes:
 
-**Do:**
-- Admit when you don't know something: "Great question — let me check and get back to you by tomorrow"
-- Acknowledge their concerns genuinely before responding
-- Share both pros and cons of your approach
-- Reference specific customer examples (with permission)
-- Follow through on every promise, no matter how small
+* **Use Case 1**  
+* **Use Case 2**  
+* **Use Case 3**  
+* **Negative impact if not solved**
 
-**Don't:**
-- Trash talk competitors
-- Make promises about future features without confirming with product
-- Pressure a prospect into a decision they're not ready for
-- Ignore concerns or try to "handle" them away
-- Use high-pressure closing tactics
+The last part — the negative impact — is crucial. What happens if they keep doing things the old way? What are the ripple effects if nothing changes? (Chris Orlob calls these “ripple effects.”) For example:
 
----
+* “If coaching doesn’t scale, managers stay overloaded, and reps don’t change behavior.”  
+* “If reporting remains manual, leadership decisions are always based on outdated data.”
 
-# Tools, Tech Stack & Usage
+Then **confirm with them:**
 
-## CRM Usage Rules & Fields
+“Did I capture that correctly? Would you add or adjust anything?”
 
-**Required fields for every opportunity:**
+This is more than a check-in. Buyers nearly always correct or add details when you recap, which gives you richer information. And it shows them you’ve been listening — a huge trust builder.
 
-| Field | When to update | Format |
-|-------|---------------|--------|
-| Stage | After every meeting | Use standard stage names |
-| Next Step | After every interaction | Specific action + date |
-| Close Date | Discovery onwards | Best estimate, update weekly |
-| Amount | After pricing discussion | Annual contract value |
-| Champion | Once identified | Contact name |
-| Competition | When discovered | Competitor name(s) |
-| Notes | After every meeting | Key takeaways, not transcripts |
+💡 *Pro tip:* Recap is not just for demos. Use it everywhere — cold calls, discovery, even email follow-ups. Reformulating what you’ve heard is one of the fastest ways to create alignment and open the door to more information.
 
-**CRM hygiene rules:**
-- Update opportunity stage within 24 hours of stage change
-- Every opportunity must have a next step with a date
-- Add meeting notes the same day
-- Flag at-risk deals immediately, don't wait for pipeline review
+Step 2: Get Permission to Proceed
 
-## Sales Engagement Tools
+Once you’ve confirmed the recap, explain what’s coming next and ask for permission.
 
-| Tool | Purpose | When to use |
-|------|---------|-------------|
-| CRM (Salesforce/HubSpot) | Pipeline management | Every deal, every day |
-| Email sequencing tool | Outbound prospecting | Prospecting stage |
-| Calendar/scheduling tool | Meeting booking | All stages |
-| Video conferencing | Virtual meetings | Discovery, demo, proposal |
-| Document sharing | Proposals, case studies | Demo onwards |
-| Sales intelligence | Research & signals | Pre-call research |
+For example:
 
-## Handover Processes
+“Here’s what I’d like to do. I’ll walk you through how we handle \[challenge\], and then we can discuss whether that would work in your process. Does that sound okay?”
 
-**SDR to AE handover:**
-1. SDR books the meeting and sends intro email (cc AE)
-2. SDR fills out handover note: company context, pain points mentioned, contact details
-3. AE reviews handover before the meeting
-4. AE sends a follow-up to the SDR after discovery: qualified or not, and why
+This small step makes the buyer feel in control. It also removes resistance because you’re not pushing a flow onto them — you’re inviting them to agree.
 
-**AE to CS handover (post-close):**
-1. AE fills out customer handover doc: why they bought, key stakeholders, success criteria, potential risks
-2. AE introduces CS manager via email before contract starts
-3. AE joins the first onboarding call
-4. CS owns the relationship from onboarding day 1
+You’ve used this same technique before:
 
-## Meeting Notes Standards
+* In a cold call: *“Do you mind if I take 30 seconds to explain why I’m calling?”*  
+* In discovery: *“Can I propose an agenda for today’s call?”*
 
-**Every meeting note should include:**
-1. **Attendees** — Who was there, their roles
-2. **Key takeaways** — 3-5 bullet points on what you learned
-3. **Objections raised** — What concerns came up
-4. **Next steps** — Specific actions with owners and dates
-5. **Deal health update** — Any change to risk level or timeline
+The psychology is the same: **permission creates alignment.**
 
-**Template:**
-"Date: [Date] | Attendees: [Names & roles]
-Takeaways: [bullets]
-Objections: [bullets]
-Next steps: [who does what by when]
-Deal health: [green/yellow/red + reason]"
+Step 3: Show the Best Feature First
 
-## Forecasting Expectations
+Now it’s time to show your product. But here’s the rule: **show as little as possible, and start with the most important thing.**
 
-**Commit categories:**
-- **Commit:** 90%+ probability. Contract sent, verbal agreement, just waiting on signatures.
-- **Best case:** 60-80% probability. Demo done, proposal being reviewed, no blockers identified.
-- **Pipeline:** 30-50% probability. Discovery done, solution fit confirmed, but not all decision makers engaged.
-- **Upside:** <30% probability. Early stage, still qualifying.
+* Don’t go in order: challenge 1, challenge 2, challenge 3\.  
+* Start with the *hair-on-fire problem* that matters most to them. Or simply your most amazing feature (hopefully powered by AI).
 
-**Rules:**
-- Only forecast deals you've had a conversation about in the last 14 days
-- If you haven't talked to the prospect in 2 weeks, move it to upside
-- Close dates must be based on the prospect's timeline, not yours
-- Update your forecast every Friday before end of day
+For example: if they said coaching their reps is the hardest and most costly issue, don’t start with reporting — start with the coaching feature.
 
----
+Sometimes you need to give context first (like where the feature lives in the platform). But keep that to **30 seconds max.** You want to land the killer feature first, and here is why:
 
-# Opportunity Management & Deal Control
+* Attention is highest at the beginning. If you bury your best feature, you risk losing them before they see the real value.  
+* Solving their top challenge first creates immediate urgency and relevance.
 
-## Mutual Commitment Checklists
+Remember: you’re not running a **tour.** You’re running a **business case in action.**
 
-**Before requesting a proposal meeting:**
-- [ ] Discovery completed with identified pain
-- [ ] At least 2 stakeholders engaged
-- [ ] Economic buyer identified by name
-- [ ] Budget range discussed
-- [ ] Decision timeline confirmed
-- [ ] No unresolved blocking objections
+Step 4: Ask the Right Questions
 
-**Before sending a contract:**
-- [ ] Pricing and terms verbally agreed
-- [ ] All decision makers have seen the demo
-- [ ] Legal/procurement requirements identified
-- [ ] Implementation timeline discussed
-- [ ] Success criteria defined
+Here’s where many reps go wrong. They show a feature, then immediately jump to the next one. Don’t do that. After every feature, you must **ask.**
 
-## Next-Step Control Techniques
+There are two questions you should cycle through:
 
-**The "specific ask" approach:**
-Instead of: "Let's reconnect next week"
-Say: "I'd love to schedule a 30-minute demo for you and [other stakeholder] next Tuesday or Wednesday. Does 2pm work?"
+* **Do you see yourself using this?**
 
-**The "mutual agenda" approach:**
-"For our next meeting, I think it would be valuable to [specific agenda item]. Would it make sense to include [other stakeholder] since they'd need to weigh in on [specific topic]?"
+Simple, but powerful. Forces them to visualize themselves in the workflow.
 
-**The "pre-commitment" approach:**
-"If the demo goes well and you see the value, what would the next step be on your end? I want to make sure we're aligned on the process."
+* **Do you see value from this compared to how you do it today?**
 
-## Internal Alignment Playbook
+Even better if you make it concrete:
 
-**When to involve your manager:**
-- Deal is > $50K ACV
-- Enterprise prospect with complex buying committee
-- Prospect asks for non-standard terms
-- Deal has been stuck for > 2 weeks
-- You need executive alignment (your VP to their VP)
+“Compared to the way you’re doing this now, do you think this would make you more efficient?”  
+“If you had this in place, how much time do you think your managers would save each week?”
 
-**How to ask for help:**
-Come with context, not just a request. Share: deal background, where it's stuck, what you've tried, and what you think would help.
+These questions are not throwaways. They do three things:
 
-## Opportunity Prioritization
+* They force the buyer to process what they’ve seen.  
+* They tie the feature back to *their* workflow.  
+* They often surface numbers or impact statements you can use later in the business case.
 
-**Focus your time based on this matrix:**
+Example talk track:
 
-| | High ICP fit | Low ICP fit |
-|---|---|---|
-| **Strong engagement** | Top priority — invest heavily | Qualify harder — might not be a fit |
-| **Low engagement** | Re-engage — they should be a fit | Deprioritize — move to nurture |
+“You mentioned earlier that reporting takes your team about two days each month. If you had this workflow in place, do you think that time would shrink? By how much?”
 
-**Weekly priority check:**
-1. Which deals have a next step this week?
-2. Which deals are at risk of stalling?
-3. Which new opportunities need qualification?
-4. Which deals should I deprioritize or close-lost?
+Now you’re not just showing a feature — you’re co-building ROI with the buyer.
 
-## Decision Process Understanding
+Bringing It Together
 
-**Map the buying process early:**
+So, the structure of a great demo looks like this:
 
-Questions to ask:
-- "Have you bought a tool like this before? What was the process?"
-- "Who needs to approve a purchase in this price range?"
-- "Is there a procurement or legal review involved?"
-- "What's your typical timeline from 'yes we want this' to signed contract?"
+* **Recap** – Summarize their situation, challenges, and impacts. Confirm.  
+* **Permission** – Lay out what’s next and ask if it’s okay.  
+* **Show** – Deliver the most relevant feature first. Keep it tight.  
+* **Ask** – Anchor the feature in their world. Confirm value and impact.
 
-**Common buying processes:**
+This structure works for both a full demo meeting and a quick five-minute demo snippet mid-discovery. It keeps the conversation tied to business outcomes instead of product features, and it ensures the buyer is engaged throughout — not just sitting back passively watching your screen.
 
-| Company size | Typical process | Timeline |
-|-------------|----------------|----------|
-| < 100 employees | VP decides, maybe one other person | 2-4 weeks |
-| 100-500 employees | Committee of 3-5, possibly procurement | 4-8 weeks |
-| 500+ employees | Formal procurement, security review, legal | 8-16 weeks |
+Chapter 2: Running the Demo
 
-**Pro tip:** Ask about the process in meeting 1. Don't wait until you're trying to close.
+I can’t teach you a one-size-fits-all demo for your product, because great demos are specific. They’re built on the pains, use cases, and opportunities we uncovered with the buyer. That’s the point: we demo *their world*, not *our product*. What I *can* teach is how to think about the moving parts so you can adapt in real time.
+
+Don’t Script a Live Demo—Script the Use Cases
+
+I recently watched a startup’s recorded demo. They had scripted the entire thing end-to-end. That’s advanced and not advanced at the same time. If a demo can be fully scripted and only works when you follow the script, you don’t need a rep to perform it live. Record it. Keep it under ten minutes. Host it on Loom, Vidyard—whatever. Send it *before* the meeting and use the live time to discuss what matters.
+
+I’ve done exactly that for a new ICP. Our flow only worked if I clicked in a precise sequence. Rather than risk a live stumble, I recorded an eight-minute walkthrough and sent it ahead of the first call. It worked. If your “demo” is always the same, don’t perform it—*package* it.
+
+What deserves scripting is different:
+
+* **Challenge/Use Case \#1 → the smallest possible demo slice that proves you solve it.**  
+* **Challenge/Use Case \#2 → the slice that proves you solve it.**  
+* **Challenge/Use Case \#3 → same.**
+
+That belongs in the playbook. Not a start-to-finish tour, just modular slices tied to problems.
+
+Cut the Interface Tour
+
+Too many reps log in and narrate the screen: “Top right are settings. Here’s the admin. This is the dashboard. Over here we set up tutors…” Boring. Useless. Buyers don’t need a museum guide; they need relief.
+
+Show the *one* thing that relieves pressure **right now**. If context is absolutely required, keep it to thirty seconds, then land the punch.
+
+Prepare Your Tabs Like a Pro
+
+If discovery and demo are in separate meetings, prepare for speed:
+
+* Open **one browser tab per use case**, each already positioned on the exact screen that proves value for that use case.  
+* Start with the hair-on-fire problem. No warm-up lap.
+
+This tiny bit of prep prevents rambling navigation and keeps the flow tight.
+
+Whenever Possible, Demo a Real Environment
+
+I’ve often had the luxury of showing live, real environments because we could provision them cheaply. If you can show the real thing, do it. Priority number one.
+
+When that’s not possible—client-specific data, privacy concerns—clone a realistic environment. Anonymize what you must, but make it look and feel exactly like what they would use. If your tool requires special scaffolding to stage a believable scenario, invest the time once and duplicate it forever.
+
+The Four-Step Flow Still Rules (Even Mid-Call)
+
+Whether you’re in a full demo or dropping a mid-discovery snippet, the same flow applies:
+
+* **Recap** what I understood (use cases \+ ripple effects if nothing changes), confirm it.  
+* **Permission** to proceed: “Here’s what I’d like to do… does that sound okay?”  
+* **Show** the most important feature first, as little as possible to prove the point.  
+* **Ask** immediately after each feature:  
+* “**Do you see yourself using this?**”  
+* “**Compared to how you’ve been doing this before, do you think you’ll be more effective and efficient with the way I’ve shown you in this demo?**”  
+* If I already know their workflow: “If you had this in place, how much time would your managers save each week?”
+
+This turns features into impact. We co-author the business case in real time.
+
+Chapter 3: Closing the Demo: Summarise, Score, Decide
+
+At the end, I bring the conversation back to clarity and commitment.
+
+I summarize in their words:
+
+“Let me quickly summarize. We discussed challenge \#1, challenge \#2, and challenge \#3. For \#1, I asked if you see yourselves using this—you said definitely yes.”
+
+Then I quantify *importance* with a clean scale:
+
+“From **0 to 10**, given your challenge and what you saw today, how important is it for you to solve this **the way we showed**?”
+
+I do this for each use case when there are multiple. If it’s messy or we only covered one, I still ask for an overall score.
+
+Here’s my rule of thumb: **anything below 8, I pause.** I ask:
+
+“Typically when clients are below eight, it isn’t worth pushing internally right now. **What would need to be true** for this to move to an eight or nine?”
+
+Now I learn whether it’s missing features, timing, budget, strategy, or stakeholders. If there’s nothing I can influence, I *don’t chase*. I’ll suggest:
+
+“Let’s revisit in six months when priorities may shift. Shall we schedule that follow-up now?”
+
+If they score **8–10**, I tighten the loop:
+
+“Great—what would bring this to a nine or ten?”
+
+I capture the specifics; those become my next-step inputs.
+
+Add Stakeholders the Right Way
+
+In most demo calls, I ask the stakeholder question explicitly—this is the exact line:
+
+**“Who else does want to be involved in a project like this somewhere on the way before it is signed, or before we decide that we’re actually going to work together for sure? Who else would be interested in being part of this journey?”**
+
+They’ll give me names. I don’t leave them to carry the message internally. I propose the next step immediately:
+
+“Perfect. Rather than you relaying everything—which is time-consuming and invites technical questions—you can’t be expected to answer—**let’s bring them in**. I’ll re-summarize the situation, the challenges, the impact, and show the specific slices we covered today. Does that work? When should we meet?”
+
+Deal size dictates structure. For **\<10k**, I compress and often go for signature. Around **10–50k**, I still keep it lean but may add one stakeholder meeting. At **50–300k+**, I invest: multiple stakeholder demos, sometimes short intros first, never a single massive meeting with CFO \+ CEO \+ COO \+ CSO. If there are multiple departments, we go one by one.
+
+### **When “My Boss Needs to See This” Appears**
+
+If my champion says, “I need to ask my boss,” I steer toward a business case:
+
+“Your boss probably cares about **\[KPI X\]**—is that right? Often leaders want three things:
+
+* What we invest.  
+* What we get back over time.  
+* How this ties to a **strategic initiative**.
+
+Let’s prepare that. I’ll assemble the numbers we discussed and map it to the initiative. **When should we do the ROI meeting?**”
+
+For larger deals, once a few people are engaged, I may recommend a focused **workshop**—but only when there’s clear buy-in and agenda.
+
+### **What I Leave Behind (or Use to Open the Next Call)**
+
+I create a **single, tight slide** we can circulate internally and reuse to kick off the next meeting. It includes:
+
+* **Situation / Use Cases** (their language)  
+* **Impact / Ripple Effects** if nothing changes  
+* **Solution Description** (only the slices we showed)  
+* **How We’ll Measure Impact** (time saved, error rate reduced, pipeline hygiene—whatever they named)  
+* **Specifics** that matter to them (data protection, where we start, rollout plan)  
+* **Top 2–3 Objections \+ crisp answers**
+
+This becomes the internal memo my champion wishes they had time to write. I write it for them.
+
+### **Putting It All Together (Flow I Actually Use)**
+
+* Recap (slide visible) → Confirm.  
+* Permission to proceed → “Does that sound okay?”  
+* Show slice \#1 (hair-on-fire) → Ask: “Do you see yourself using this?” \+ “Compared to today… more effective and efficient?” → quantify time/money.  
+* Show slice \#2 → Ask again.  
+* Show slice \#3 (if needed) → Ask again.  
+* Summarize → Importance 0–10 per slice or overall.  
+* If \<7 → clarify what would move it up; park with a date.  
+* If 8–10 → add stakeholders with a concrete invite; or propose ROI meeting/workshop.  
+* Send the one-slide recap/business case.
+
+That’s the craft. I’m not proving that my product is big; I’m proving that their problem can be small—and soon.
+
+## **6.6. C-level Presentation**
+
+Three slides: business impact, risk mitigation, and implementation confidence. Keep detail in appendix.
+
+## **6.7. Workshop**
+
+Collaborative mapping of current vs. future-state process; co-create a mutual action plan with owners and dates.
+
+# **7\. Objection Handling & Competitive Intelligence**
+
+## **7.1. Most Common Objections and Responses**
+
+Budget, timing, security, integration, change management. Use evidence, ROI math, and customer proof to de-risk decisions.
+
+| Cold Call Objections | Best Answer |
+| :---- | :---- |
+| Could you send the demo link because i get many calls and email about sales Tech? | I gladly share a demo with you. Now, if your sales reps will get that question with the email, what would you teach them? You would not allow them to get off and just send the email, right? My AI Tutor does not allow me to do that either. It asks whether we can book a meeting next week and in case you do not like the demo I send you, you can still cancel. Should we quickly look in our calendars next week? |
+| We already have trainings in place. | That is great. Our AI Tutors teach the reps exactly what you already have in your trainings. What we realised with our clients is that only about 5-10% of reps actually consume those ressources and can keep their content over time and actually put them into practice. Is that something that sounds familiar for you as well? |
+| Are you a training provider? | Are you looking for one? |
+| We already have a training provider | That is fantastic, almost all our clients have and implemented such methodologies as Sandler, MEDDIC or SPICED or have done other trainings. One challenge we have seen with these is that reps learn them in an intense course but forget more than 90% of it again after 2-3 months. Is that something that sounds familiar? |
+| Are you a sales enablement provider? | Are you looking for one? |
+| We have enablement team in-house. | That is fantastic, almost all our clients have a sales enablement team in place that is responsible for training. Is that what your sales enablement team does as well on their own? |
+| How do you measure how people change their behaviour? | We usually have two approaches. First, we choose specific skills that we want to develop in your sales reps. For instance uncovering urgency and let’s say cold call skills. Now, the tutor autonomously develops those skills in your reps during the day. After a short periode, let’s say 3 months, we can analyse the cold calls and see whether they have improved in quality. Another way is the tutor actually delivers points to the reps for getting those skills right. If the points have improved on their personal skill table, it is a good sign they actually have improved and the conversion rates, sales cycles and deal sizes will follow. Do you have specific skills you see in your reps that need continuous development? |
+| We do not have the culture that supports learning | Yeah we have seen that in some other organisations as well. Does that mean you are not investing in learning at all? |
+| We have it covered | \- You have it covered? \- Do you mean you have people who train your team? |
+| I’m in a meeting | That must be a really boring meeting? (smile) |
+| Send me an email | Sure, that is a great suggestion. Can I add something to that? Let’s book a meeting already in 1 or 2 weeks, I send you the material, and in case you do not like it, you can still cancel. This way, we safe each other’s time. When works for you? |
+| Data privacy (Betriebsrat in Germany): we can’t get access to CRM data and evaluate individual performance. | Anonymized data → however, can this be used for coaching? |
+| We are good right now |  |
+| We have highly skilled reps that follow all of our trainings | Oh wow, I never heard that before. Are you interested in selling your methodology, could be a million dollar training idea (laugh a little) |
+| That is right now not in our priority list | What needs to happen in order for that to change? Until when? |
+| Are you another recording tool such as Gong, Kickscale, etc.? | Are you using a recording tool already? We do not record calls \- that already needs to be in place in order to work with us on some skills. The challenge with Gong is that nobody uses their coaching feature because no rep is proactively watching the overwhelming feedback of this coaching feature. So they never learn. Then explain what Taskbase does differently (proactively, skill development, data from CRM) |
+| It won’t work in our environment? |  |
+| We just implemented something very similar internally |  |
+| **Discovery Objections** | **Best Answer** |
+| How do you measure how people change their behaviour? | We usually have two approaches. First, we choose specific skills that we want to develop in your sales reps. For instance uncovering urgency and let’s say cold call skills. Now, the tutor autonomously develops those skills in your reps during the day. After a short periode, let’s say 3 months, we can analyse the cold calls and see whether they have improved in quality. Another way is the tutor actually delivers points to the reps for getting those skills right. If the points have improved on their personal skill table, it is a good sign they actually have improved and the conversion rates, sales cycles and deal sizes will follow. Do you have specific skills you see in your reps that need continuous development? |
+| We do not have the culture that supports learning. What do you suggest? | Yeah we have seen that in some other organisations as well. Does that mean you are not investing in learning at all? |
+| Data privacy (Betriebsrat in Germany): we can’t get access to CRM data and evaluate individual performance. | Anonymized data → however, can this be used for coaching? |
+| That is right now not in our priority list | What needs to happen in order for that to change? Until when? |
+| Are you another recording tool such as Gong, Kickscale, etc.? | Are you using a recording tool already? We do not record calls \- that already needs to be in place in order to work with us on some skills. The challenge with Gong is that nobody uses their coaching feature because no rep is proactively watching the overwhelming feedback of this coaching feature. So they never learn. Then explain what Taskbase does differently (proactively, skill development, data from CRM) |
+| Where does it live? Like does it live in HubSpot or does it live in a separate page? |  |
+| Do you have any examples of sales playbooks like best you have somehow anonymized? |  |
+| Five skills are included. And how many skills do you have? |  |
+| Does this work for customer success as well? | Yes, of course. The skills are a bit different but we use it with our CS team too. |
+| **Demo Objections** | **Best Answer** |
+| How do you measure how people change their behaviour? | We usually have two approaches. First, we choose specific skills that we want to develop in your sales reps. For instance uncovering urgency and let’s say cold call skills. Now, the tutor autonomously develops those skills in your reps during the day. After a short periode, let’s say 3 months, we can analyse the cold calls and see whether they have improved in quality. Another way is the tutor actually delivers points to the reps for getting those skills right. If the points have improved on their personal skill table, it is a good sign they actually have improved and the conversion rates, sales cycles and deal sizes will follow. Do you have specific skills you see in your reps that need continuous development? |
+| We do not have the culture that supports learning | Yeah we have seen that in some other organisations as well. Does that mean you are not investing in learning at all? |
+| Data privacy (Betriebsrat in Germany): we can’t get access to CRM data and evaluate individual performance. | Anonymized data → however, can this be used for coaching? |
+| Are you another recording tool such as Gong, Kickscale, etc.? | Are you using a recording tool already? We do not record calls \- that already needs to be in place in order to work with us on some skills. The challenge with Gong is that nobody uses their coaching feature because no rep is proactively watching the overwhelming feedback of this coaching feature. So they never learn. Then explain what Taskbase does differently (proactively, skill development, data from CRM) |
+
+## **7.2. Competitor Overview & Strengths/Weaknesses**
+
+Map by use case, integration approach, admin overhead, and time-to-value. Position Taskbase on governance depth and adoption ease.
+
+| Name | Website | Information | Relevance | Region | Their ICP | Category | Differentiated Value (Strengths / Weaknesses) | Customers | Pricing | Added By |
+| :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- |
+| Arist | [http://Arist.com](http://Arist.com) | [https://www.youtube.com/watch?v=KnfVCd6dfko](https://www.youtube.com/watch?v=KnfVCd6dfko) | ⭐️⭐️ | World | NGOs, Software companies | Learning for Sales Teams | We are based on skills and really develop those. That gives an extremely structured approach to development. At any time, a manager can add a skill and the Tutor will get the work done. | Dealfront | [https://www.arist.co/pricing](https://www.arist.co/pricing) | Patrick Trümpi |
+| Pitchmonster | [https://www.pitchmonster.io/](https://www.pitchmonster.io/) |  | ⭐️⭐️ |  |  |  |  |  |  |  |
+| Seismic | [https://www.seismic.com/](https://www.seismic.com/) |  | ⭐️⭐️ |  |  | Sales Enablement plattform |  |  |  |  |
+| Highspot | [https://www.highspot.com/de/](https://www.highspot.com/de/) |  | ⭐️⭐️ |  |  | Sales Enablement plattform |  |  |  |  |
+| ChatGPT | [https://openai.com/index/chatgpt-study-mode/](https://openai.com/index/chatgpt-study-mode/) |  | ⭐️ |  |  |  |  |  |  |  |
+| SalesHood | [http://saleshood.com](http://saleshood.com) |  |  |  |  | Sales Enablement plattform |  |  |  |  |
+| wejam | [https://www.wejam.ai/](https://www.wejam.ai/) |  | ⭐️⭐️⭐️ | DACH | Sales | AI Role Play |  |  |  | Samir |
+| Zenarate | [http://zenarate.com](http://zenarate.com) |  |  |  |  | Role play and recording feedback / Sales Enablement plattform |  |  |  |  |
+| Pepsales AI | [https://www.pepsales.ai/](https://www.pepsales.ai/) |  |  |  |  |  |  |  |  |  |
+| Retorio | [https://www.retorio.com/product](https://www.retorio.com/product) |  | ⭐️ |  |  |  |  |  |  |  |
+| Jiminny | [http://www.jiminny.com](http://www.jiminny.com) |  | ⭐️ |  |  |  |  |  |  |  |
+| Setero | [https://www.setero.io/home](https://www.setero.io/home) |  |  |  |  |  |  |  |  |  |
+| High Five Academy | [https://www.high-five.ai/de/business](https://www.high-five.ai/de/business) |  | ⭐️ |  |  |  |  |  |  |  |
+| Learn.xyz | [https://www.learn.xyz/companies](https://www.learn.xyz/companies) |  | ⭐️ |  |  |  |  |  |  |  |
+| Bliro | [https://www.bliro.io/en/sales](https://www.bliro.io/en/sales) | Personal AI Sales Assistant | ⭐️ | DACH |  |  |  |  |  |  |
+| Reflact | [https://reflact.com/](https://reflact.com/) | LMS \+ Simulation | ⭐️ |  |  |  |  |  | \- Simulation Pricing 3-5k (3-5MT) initial für 1 Bot & Training. \- Autor: 800eur/Jahr. \- Pro Lernender 20eur/Jahr. \- Nutzen: ChatGPT, inkl Feedback. Kriterien. Content kann Autor erstellen oder sie. \- Inkl Video für Avatar, ist langsamer als Audiobot (Telekom, Feuerwehr in WBT, LMS in Flugbranche) |  |
+| Mindtickle | [https://www.mindtickle.com/](https://www.mindtickle.com/) |  | ⭐️⭐️ |  |  |  |  |  |  |  |
+| Spekit | [https://www.spekit.com/](https://www.spekit.com/) | AI Learning Enablement | ⭐️⭐️⭐️ |  |  |  |  |  |  |  |
+| Demodesk | [https://demodesk.com/comparison/demodesk-vs-gong](https://demodesk.com/comparison/demodesk-vs-gong) | AI assistant with real-time coaching | ⭐️ |  |  |  |  |  |  |  |
+| flowit | [http://flowit.com](http://flowit.com) | AI Coaching | ⭐️ | CH | HR department of large companies |  |  |  |  |  |
+| Glyphic | [https://www.glyphic.ai/](https://www.glyphic.ai/) | Recording | ⭐️ | EU |  |  | They have GTM insights other than the coaching |  |  |  |
+| Skylar | [https://www.getskylar.com/](https://www.getskylar.com/) | AI Role-play coaching | ⭐️ | EU |  |  |  |  |  |  |
+| Zick learn | [https://www.zicklearn.com/en](https://www.zicklearn.com/en) | Microlearning | ⭐️⭐️ | Ireland |  |  |  |  |  |  |
+| Blify | [https://www.blify.co/](https://www.blify.co/) | Microlearning | ⭐️⭐️ |  |  |  |  |  |  |  |
+| Salesfox | [https://salesfox.io/](https://salesfox.io/) | Cold Calling AI coach | ⭐️ |  |  |  |  |  |  |  |
+| Docebo | [https://www.docebo.com/de/](https://www.docebo.com/de/) | LMS for sales reps | ⭐️⭐️⭐️ | World |  |  |  |  |  |  |
+| Workday |  |  | ⭐️ |  |  |  |  |  |  |  |
+| Successfactors |  |  | ⭐️ |  |  |  |  |  |  |  |
+| Hyperbound | [https://www.hyperbound.ai/](https://www.hyperbound.ai/) | AI Sales Coaching | ⭐️⭐️⭐️ |  |  |  |  |  |  |  |
+| ENZRA( Ranjit de Souza invested here, co-built it) | \- [https://www.helloezra.com/en-gb/sales-leadership-coaching-for-tech](https://www.helloezra.com/en-gb/sales-leadership-coaching-for-tech) |  |  |  |  |  |  |  |  |  |
+| BetterUp | \- [https://www.betterup.com/solutions/sales-coaching](https://www.betterup.com/solutions/sales-coaching) |  |  |  |  |  |  |  |  |  |
+| Coachhub | \- [https://www.coachhub.com/](https://www.coachhub.com/) |  |  |  |  |  |  |  |  |  |
+| Avarra |  |  |  |  |  |  | Only role play |  |  |  |
+
+## **7.3. Trap Setting and Landmine Questions**
+
+* “How does your tool enforce stage exit criteria without admin-heavy workarounds?”  
+* “What’s your plan when reps skip fields—do you detect and fix it automatically?”
+
+## **7.4. Win/Loss Analysis Snippets**
+
+Capture top 3 reasons per segment; feed insights into messaging, roadmap, and enablement priorities.
+
+## **7.5. Positioning Against Incumbents and Challengers**
+
+Lead with business outcomes and governance, not feature parity. Prove faster time-to-adoption and lower admin cost.
+
+# **8\. Tools & Tech Stack**
+
+## **8.1. CRM Guidelines and Hygiene (e.g., Salesforce)**
+
+* Every meeting logged same day; next step and date always present; close dates realistic with mutual plan alignment  
+* Mandatory fields enforced by validation; no free-text where picklists exist
+
+## **8.2. Sales Engagement Tools (e.g., Outreach, Apollo)**
+
+Use persona-based sequences; personalize first touch; measure reply rates, meetings set, and conversion.
+
+## **8.3. Demo Platforms and Usage**
+
+Standardize flows, record reference demos, and keep an appendix of role-specific paths.
+
+## **8.4. Enablement Tools (e.g., Gong, Taskbase)**
+
+Tag calls, create libraries by persona and stage, and maintain a shared repository of best-practice clips and deal briefs.
+
+## **8.5. Data & Enrichment Tools (e.g., Clearbit, ZoomInfo)**
+
+Enrich accounts for ICP fit; use intent signals to prioritize outreach; keep DNC and compliance lists current.
+
+## **8.6. Other tools**
+
+Scheduling, proposal, signature, and project tools integrated with CRM for end-to-end visibility.
+
+# **9\. KPIs, Metrics & Compensation**
+
+## **9.1. Daily/Weekly Activity Metrics**
+
+* SDR: quality touches, meetings set, meeting acceptance rate, show rate, SALs created  
+* AE: stage progression, demos, multi-thread ratio, mutual plans created, proposals sent
+
+## **9.2. Stage-by-Stage Conversion Benchmarks**
+
+Track conversion by segment and persona. Inspect drop-offs; improve messaging, qualification, or proof assets accordingly.
+
+## **9.3. Quota and Compensation Structure**
+
+Align on role-specific targets with accelerators for overachievement and quality gates for pipeline hygiene.
+
+## **9.4. Pipeline Health Metrics**
+
+* Coverage ratio, aged deals, stage velocity, push rate, and commit accuracy  
+* Leading indicators: meetings, qualified opps, multi-threading depth
+
+## **9.5. Forecasting Best Practices**
+
+Top-down and bottom-up triangulation; weekly cadence; commit based on evidence and verified next steps.
+
+# **10\. Onboarding & Training**
+
+## **10.1. 30/60/90-Day Ramp Plan**
+
+30: Foundations and shadowing. 60: Run full-cycle on smaller deals. 90: Full quota-bearing with manager sign-off.
+
+## **10.2. Certification Paths**
+
+Role certifications for product, discovery, demo, and process adherence; must-pass call reviews and scenario role-plays.
+
+## **10.3. Shadowing and Role-Play Programs**
+
+Structured observation → co-pilot → lead; weekly role-plays with calibrated rubrics and feedback loops.
+
+## **10.4. Learning Management Systems & Resources**
+
+Centralize assets, micro-learnings, and checklists. Track completion and knowledge retention.
+
+## **10.5. Performance Evaluation During Onboarding**
+
+Clear expectations, milestone reviews, and remediation plans when needed.
+
+# **11\. Sales Enablement & Content**
+
+## **11.1. Sales Decks and One-Pagers**
+
+Persona-specific decks; concise problem → value → proof → next steps. Include appendix for technical deep-dives.
+
+## **11.2. Case Studies by Vertical**
+
+Focus on outcomes, not features—win rate lift, ramp acceleration, and governance improvements.
+
+## **11.3. Proposal & Quote Templates**
+
+Standard SKUs, tiering, legal terms insertions, and approval rules. Dynamic pricing guardrails.
+
+## **11.4. Competitive Battle Cards**
+
+“If they say X, we say Y” talk tracks, proof assets, and trap questions. Keep current with win/loss inputs.
+
+## **11.5. Customization Guidelines for Content**
+
+What can be tailored vs. must remain standardized; brand and compliance checks before external use.
+
+# **12\. Handoff & Collaboration**
+
+## **12.1. MQL → SQL Handoff Process**
+
+Define acceptance criteria, SLA, required data fields, and feedback loop with Marketing for quality enforcement.
+
+## **12.2. SDR to AE Handoff Checklist**
+
+* Confirmed meeting, agenda, persona, pains, and desired outcomes  
+* Account notes with triggers, stakeholders, and data hygiene validated
+
+## **12.3. AE to Customer Success Handoff**
+
+Share business case, success plan, timeline, risks, and stakeholders. Ensure kickoff readiness and adoption plan.
+
+## **12.4. Working with Marketing for ABM & Content**
+
+Target lists, messaging tests, intent data, and persona asset packs; weekly sync and quarterly retro.
+
+## **12.5. Product Feedback Loop**
+
+Collect feature requests and objections; tag by segment and ARR; route to Product with priority scores and examples.
+
+# **13\. Legal, Pricing & Procurement**
+
+## **13.1. Pricing Tiers and Packaging**
+
+Good/Better/Best tiers by feature and usage. Align packaging to personas and deal complexity.
+
+## **13.2. Discounting Rules and Approval Workflows**
+
+Guardrails by segment and ACV; approvals routed via RevOps and Finance; never trade price for silence—trade for references, term, or scope.
+
+## **13.3. Procurement & Legal Redline Playbook**
+
+Keep standard clause library, fallback provisions, and escalation matrix. Pre-empt InfoSec/security reviews with documentation packs.
+
+## **13.4. Standard Contract Templates**
+
+MSA, Order Form, DPA, and SOW templates maintained by Legal; versioned and centrally accessible.
+
+## **13.5. Security & Compliance Documents**
+
+**Understanding Data Privacy, Data Protection, and Works Council Requirements for Skill Profiles**
+
+This article clarifies common misconceptions about why certain employee-related features—especially skill profiles—may or may not be displayed in a product. Discussions often reference “data privacy issues,” yet the underlying constraints usually lie elsewhere. The goal here is to distinguish between the relevant domains: **data protection**, **security**, **works council requirements**, and **legal considerations**, with a focus on the German regulatory context.
+
+## **13.5.1. Data Protection: What It Actually Regulates**
+
+Data protection authorities primarily assess **which types of data are being collected** and how they are processed. Different data types carry different levels of risk:
+
+* **Low-risk data** (e.g., name, email address) typically triggers minimal scrutiny.  
+* **Higher-risk data**, such as **skill profiles**, **audio recordings**, or **video data**, requires more attention regarding:
+
+Storage location (e.g., country-specific restrictions)
+
+* Data handling and retention  
+* Subprocessors and third-party access
+
+A key point:  
+**Data protection rules rarely prohibit displaying a skill profile.**  
+The assessment focuses on **storage, processing, and data flows**, not on whether the information can be shown in the interface.
+
+## **13.5.2. Security Considerations**
+
+Security requirements run in parallel with data protection. As data sensitivity increases, customers expect stronger guarantees around:
+
+* Infrastructure and storage  
+* Access control  
+* Internal and external data transfers
+
+Although important, these concerns do not directly affect whether a skill profile can be displayed.
+
+## **13.5.3. Works Council (Betriebsrat): The Real Visibility Constraint**
+
+In Germany, works councils play a decisive role when technology could be interpreted as **employee monitoring**. Under relevant labor laws, they have a right of co-determination for tools that:
+
+* Collect behavioral data  
+* Infer performance- or skill-related insights  
+* Could create pressure on employees to behave in particular ways
+
+Because skill profiles often rely on user interactions and behavioral signals, they may fall under this category. Typical works council concerns include:
+
+* Displaying the profile might create **implicit performance pressure**.  
+* Managers could theoretically use the data to evaluate individuals or tie compensation to AI-inferred metrics.  
+* As a result, councils may require:
+
+Limiting visibility
+
+* Providing only a private view to the employee  
+* Renaming or reframing the feature (e.g., “wallet”)  
+* Adjusting how the data is generated or presented
+
+In previous implementations with similar functionality, works councils have imposed restrictions even when data protection authorities had no objections.
+
+## **13.5.4. Legal Topics and Customer Maturity**
+
+Legal considerations vary by country, but in Germany they typically intersect with the works council’s rights. Many early-stage customers do not have a works council yet, meaning these constraints become relevant only as organizations grow.
+
+## **Summary**
+
+* **Data privacy** is not the reason skill profiles cannot be shown; its focus lies on data categories and processing.  
+* **Works council requirements**, particularly regarding employee monitoring, are the primary factor influencing whether and how such profiles can be displayed.  
+* Visibility limitations, naming adjustments, and display rules typically originate from **co-determination rights**, not from data protection law.
+
+# **14\. Playbooks for Specific Scenarios**
+
+## **14.1. Enterprise vs. SMB Sales Plays**
+
+Enterprise: MEDDICC rigor, executive alignment, mutual action plans. SMB: velocity, lighter discovery, faster proof.
+
+## **14.2. Upsell & Expansion Playbooks**
+
+Land-and-expand motions mapped to adoption milestones; cadence with sponsor QBRs.
+
+## **14.3. Selling During a Recession or Budget Freeze**
+
+Lead with risk and cost reduction; offer pilots with clear success criteria and executive readouts.
+
+## **14.4. Renewal Management & Retention**
+
+Start early, validate value realization, identify churn risks, and align on next-phase roadmap.
+
+## **14.5. Product-Led Sales Motions (PLG)**
+
+Usage signals to upsell; trigger AE engagement when activation and team invites hit thresholds.
+
+# **15\. Continuous Improvement & Feedback Loop**
+
+## **15.1. How to Submit Feedback**
+
+Use the Playbook Feedback form linked in CRM and weekly team channels. Include example, impact, and suggested change.
+
+## **15.2. Cadence for Playbook Reviews**
+
+Monthly micro-updates; quarterly deep reviews with cross-functional stakeholders.
+
+## **15.3. KPI-Based Playbook Optimisation**
+
+Tie changes to KPI shifts (win rate, cycle time, forecast accuracy). A/B test scripts and stage criteria adjustments.
+
+## **15.4. Involving Top Reps in Playbook Evolution**
+
+Rotate a “Deal Doctors” council of top SDRs, AEs, and AMs; capture field-proven tactics and codify into process.
+
+## **15.5. Playbook Change Log & Versioning**
+
+Maintain semantic versions, summary of changes, and owners. Archive outdated assets.
+
+# **16\. Commission, Development Plans & PIP**
+
+## **16.1. Commission Sheets and Structure**
+
+Clear OTE splits by role, accelerators, and claw-back rules. Tie SPIFFs to strategic initiatives (e.g., stage adoption, multi-threading).
+
+## **16.2. Development Plans**
+
+Individual growth plans mapped to competencies: product mastery, deal strategy, storytelling, negotiation, and collaboration.
+
+## **16.3. Performance Improvement Plan (PIP)**
+
+Time-bound plan with clear KPIs, enablement support, and review checkpoints. Focus on coaching and measurable progress.
+
+## **Operational Milestones & Ownership**
+
+| Milestone | Target Date | Owner | Status |
+| :---- | :---- | :---- | :---- |
+| Publish v1 Playbook (Sections 1–9) |  | \[Add Sales Enablement\] | In ProgressBlue |
+| Roll out Stage Exit Criteria in CRM |  | \[Add RevOps\] | ReviewYellow |
+| Complete Discovery & Demo Certifications |  | \[Add SDR/AE Managers\] | PlannedGreen |
+
+## **Quarterly Enablement Tasks**
+
+4  
+ee210ba6-ee0a-426a-a839-13b2402bd349  
+incomplete  
+Large SalesPlaybook Update
+
+Risk watchouts: skipping exit criteria, poor CRM hygiene, single-threaded deals, and late involvement of RevOps/Legal lead to slippage and forecast misses. Mitigate by enforcing governance and using mutual action plans.
 `;

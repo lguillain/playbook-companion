@@ -22,6 +22,7 @@ describe("computeHealthScore", () => {
       partial: 0,
       missing: 0,
       outdated: 0,
+      lastAnalyzed: null,
     });
   });
 

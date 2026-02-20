@@ -90,6 +90,10 @@ test.describe("Waitlist flow", () => {
     // Leave waitlist and sign out buttons should be present
     await expect(page.getByRole("button", { name: "Leave waitlist" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+
+    // Footer should show Powered by Taskbase
+    await expect(page.getByText("Powered by")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Taskbase" })).toBeVisible();
   });
 
   test("11th external user sees the waitlist screen", async ({ page }) => {

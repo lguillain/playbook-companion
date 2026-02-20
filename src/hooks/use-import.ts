@@ -66,6 +66,25 @@ export function useStartImport(onPhaseChange?: (phase: "extracting" | "analyzing
       queryClient.invalidateQueries({ queryKey: ["playbook-sections"] });
       queryClient.invalidateQueries({ queryKey: ["skills"] });
       queryClient.invalidateQueries({ queryKey: ["health-score"] });
+      queryClient.invalidateQueries({ queryKey: ["analyzed-at"] });
+    },
+  });
+}
+
+export function useReAnalyze() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("analyze");
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["playbook-sections"] });
+      queryClient.invalidateQueries({ queryKey: ["skills"] });
+      queryClient.invalidateQueries({ queryKey: ["health-score"] });
+      queryClient.invalidateQueries({ queryKey: ["analyzed-at"] });
     },
   });
 }

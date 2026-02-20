@@ -46,10 +46,23 @@ test.describe("Review & Publish", () => {
     ).toBeVisible({ timeout: 10_000 });
   });
 
-  test("Notify team button is visible", async ({ page }) => {
-    await expect(page.getByRole("button", { name: /notify team/i })).toBeVisible({
-      timeout: 10_000,
-    });
+  test("Notify team button is visible but non-interactive", async ({ page }) => {
+    const notifyBtn = page.getByRole("button", { name: /notify team/i });
+    await expect(notifyBtn).toBeVisible({ timeout: 10_000 });
+
+    // Button is styled as disabled (opacity-50, cursor-default)
+    await expect(notifyBtn).toHaveClass(/opacity-50/);
+    await expect(notifyBtn).toHaveClass(/cursor-default/);
+  });
+
+  test("Notify team button shows tooltip on hover", async ({ page }) => {
+    const notifyBtn = page.getByRole("button", { name: /notify team/i });
+    await expect(notifyBtn).toBeVisible({ timeout: 10_000 });
+
+    await notifyBtn.hover();
+    await expect(
+      page.getByText("Only available for users who have linked the Taskbase Sales Coach"),
+    ).toBeVisible({ timeout: 5_000 });
   });
 
   // ── With staged edits ──────────────────────────────────────────────
@@ -111,6 +124,14 @@ test.describe("Review & Publish", () => {
 
     test("to-review count badge is shown", async ({ page }) => {
       await expect(page.getByText(/\d+ to review/)).toBeVisible({ timeout: 10_000 });
+    });
+
+    test("staged edit renders inline word-level diff", async ({ page }) => {
+      // The seeded edit has both before and after text — triggers the inline TextDiff
+      // which shows a "Changes" label and color legend
+      await expect(page.getByText("Changes")).toBeVisible({ timeout: 10_000 });
+      await expect(page.getByText("removed")).toBeVisible();
+      await expect(page.getByText("added")).toBeVisible();
     });
   });
 });

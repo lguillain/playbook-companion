@@ -298,7 +298,8 @@ export const OnboardingFlow = ({ onComplete }: { onComplete: () => void }) => {
           {step === "source" && (
             <motion.div key="source" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <h2 className="text-2xl text-foreground mb-1">Connect your playbook</h2>
-              <p className="text-sm text-muted-foreground mb-6">Choose where your sales playbook lives</p>
+              <p className="text-sm text-muted-foreground mb-1">Choose where your sales playbook lives</p>
+              <p className="text-xs text-muted-foreground/70 mb-6">You can add more sources later from the Integrations panel.</p>
 
               <div className="space-y-2 mb-6">
                 {sources.map((src) => (

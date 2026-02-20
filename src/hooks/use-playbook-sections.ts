@@ -25,6 +25,7 @@ export function usePlaybookSections() {
         content: s.content,
         depth: s.depth ?? 0,
         lastUpdated: s.last_updated,
+        provider: s.provider ?? "pdf",
         skillsCovered: (junctions ?? [])
           .filter((j) => j.section_id === s.id)
           .map((j) => ({ skillId: j.skill_id, coverageNote: j.coverage_note ?? null })),
@@ -68,9 +69,55 @@ export function useResetPlaybook() {
       queryClient.invalidateQueries({ queryKey: ["playbook-sections"] });
       queryClient.invalidateQueries({ queryKey: ["skills"] });
       queryClient.invalidateQueries({ queryKey: ["health-score"] });
+      queryClient.invalidateQueries({ queryKey: ["analyzed-at"] });
       queryClient.invalidateQueries({ queryKey: ["staged-edits"] });
       queryClient.invalidateQueries({ queryKey: ["imports"] });
       queryClient.invalidateQueries({ queryKey: ["connections"] });
+    },
+  });
+}
+
+export function useRemoveSource() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (provider: string) => {
+      // 1. Get section IDs for this provider (RLS scopes to current user)
+      const { data: sections, error: fetchErr } = await supabase
+        .from("playbook_sections")
+        .select("id")
+        .eq("provider", provider);
+      if (fetchErr) throw fetchErr;
+      const ids = (sections ?? []).map((s) => s.id);
+      if (ids.length === 0) return;
+
+      // 2. Delete section_skills for those sections
+      for (const id of ids) {
+        await supabase.from("section_skills").delete().eq("section_id", id);
+      }
+
+      // 3. Delete staged_edits for those sections
+      for (const id of ids) {
+        await supabase.from("staged_edits").delete().eq("section_id", id);
+      }
+
+      // 4. Delete the sections themselves
+      const { error: delErr } = await supabase
+        .from("playbook_sections")
+        .delete()
+        .eq("provider", provider);
+      if (delErr) throw delErr;
+
+      // 5. Re-analyze skills with remaining sections
+      const { error: analyzeError } = await supabase.functions.invoke("analyze");
+      if (analyzeError) throw analyzeError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["playbook-sections"] });
+      queryClient.invalidateQueries({ queryKey: ["skills"] });
+      queryClient.invalidateQueries({ queryKey: ["health-score"] });
+      queryClient.invalidateQueries({ queryKey: ["analyzed-at"] });
+      queryClient.invalidateQueries({ queryKey: ["staged-edits"] });
     },
   });
 }

@@ -72,7 +72,25 @@ test.describe("Authentication flows", () => {
     await page.waitForURL("/forgot-password");
   });
 
+  // ── Login page branding & footer ──────────────────────────────────
+
+  test("login page does not show Playbook Manager branding", async ({ page }) => {
+    await page.goto("/login");
+    await expect(page.getByText("Playbook Manager")).not.toBeVisible();
+  });
+
+  test("login page shows Powered by Taskbase footer", async ({ page }) => {
+    await page.goto("/login");
+    await expect(page.getByText("Powered by")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Taskbase" })).toBeVisible();
+  });
+
   // ── Signup ─────────────────────────────────────────────────────────
+
+  test("signup page shows correct subtitle", async ({ page }) => {
+    await page.goto("/signup");
+    await expect(page.getByText("Fill in your details below")).toBeVisible();
+  });
 
   test("signup without disclaimer checkbox shows error", async ({ page }) => {
     await page.goto("/signup");
@@ -132,6 +150,12 @@ test.describe("Authentication flows", () => {
     await page.waitForURL("/login");
   });
 
+  test("forgot password page shows Powered by Taskbase footer", async ({ page }) => {
+    await page.goto("/forgot-password");
+    await expect(page.getByText("Powered by")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Taskbase" })).toBeVisible();
+  });
+
   // ── Reset password page ────────────────────────────────────────────
 
   test("reset password page shows form", async ({ page }) => {
@@ -149,6 +173,12 @@ test.describe("Authentication flows", () => {
     await page.getByRole("button", { name: "Update password" }).click();
 
     await expect(page.getByText(/do not match/i)).toBeVisible();
+  });
+
+  test("reset password page shows Powered by Taskbase footer", async ({ page }) => {
+    await page.goto("/reset-password");
+    await expect(page.getByText("Powered by")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Taskbase" })).toBeVisible();
   });
 
   // ── Navigation guards ──────────────────────────────────────────────

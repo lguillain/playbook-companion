@@ -44,6 +44,7 @@ export type PlaybookSectionRow = {
   last_updated: string;
   created_at: string;
   source_page_id?: string;
+  provider: string;
 };
 
 export type SectionSkillRow = {
@@ -140,7 +141,15 @@ export type PlaybookSection = {
   content: string;
   depth: number;
   lastUpdated: string;
+  provider: string;
   skillsCovered: SectionSkillLink[];
+};
+
+export const PROVIDER_LABELS: Record<string, string> = {
+  pdf: "PDF Upload",
+  taskbase: "Taskbase Template",
+  notion: "Notion",
+  confluence: "Confluence",
 };
 
 export type EditSource = "chat" | "manual";
@@ -183,4 +192,5 @@ export type HealthScore = {
   partial: number;
   missing: number;
   outdated: number;
+  lastAnalyzed: string | null;
 };

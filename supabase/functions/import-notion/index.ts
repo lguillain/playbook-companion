@@ -3,15 +3,12 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import { env } from "../_shared/env.ts";
 import { splitIntoSections } from "../_shared/split-sections.ts";
 import { analyzeSections } from "../_shared/analyze-sections.ts";
+import { scopedDeleteByProvider } from "../_shared/scoped-delete.ts";
 
 const ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY");
 const NOTION_API_VERSION = "2022-06-28";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 // ── Notion helpers ──────────────────────────────────────────────────
 
@@ -205,6 +202,7 @@ function sortPagesAsTree(pages: ParsedPage[]): TreePage[] {
 // ── Main handler ────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -336,11 +334,18 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Clear existing data for THIS USER
-    await adminClient.from("section_skills").delete().eq("user_id", user.id);
-    await adminClient.from("staged_edits").delete().eq("created_by", user.id);
-    await adminClient.from("chat_messages").delete().eq("created_by", user.id);
-    await adminClient.from("playbook_sections").delete().eq("user_id", user.id);
+    // Clear existing Notion sections only (preserves other sources)
+    await scopedDeleteByProvider(adminClient, user.id, "notion");
+
+    // Determine sort_order offset so new sections come after existing ones
+    const { data: maxRow } = await adminClient
+      .from("playbook_sections")
+      .select("sort_order")
+      .eq("user_id", user.id)
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .single();
+    const sortOffset = maxRow?.sort_order ?? 0;
 
     const fallbackDate = new Date().toISOString().split("T")[0];
 
@@ -356,10 +361,11 @@ Deno.serve(async (req) => {
           user_id: user.id,
           title: sec.title,
           content: sec.content,
-          sort_order: i + 1,
+          sort_order: sortOffset + i + 1,
           last_updated: sec.lastEdited ?? fallbackDate,
           source_page_id: sec.sourcePageId,
           depth: sec.depth,
+          provider: "notion",
         })
         .select("id")
         .single();
@@ -373,9 +379,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Analyze sections for skill coverage
+    // Fetch ALL user sections (across all providers) for skill analysis
+    const { data: allUserSections } = await adminClient
+      .from("playbook_sections")
+      .select("id, title, content, last_updated")
+      .eq("user_id", user.id)
+      .order("sort_order");
+
+    const sectionsForAnalysis = (allUserSections ?? []).map((s: any) => ({
+      id: s.id,
+      title: s.title,
+      content: s.content,
+      lastModified: s.last_updated,
+    }));
+
+    // Analyze ALL sections for skill coverage (so skills from other providers aren't lost)
     await analyzeSections(
-      insertedSections,
+      sectionsForAnalysis,
       adminClient,
       user.id,
       ANTHROPIC_API_KEY!,

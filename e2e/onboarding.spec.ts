@@ -46,12 +46,13 @@ test.describe("Onboarding Flow", () => {
     await expect(page.getByText("Choose where your sales playbook lives")).toBeVisible();
   });
 
-  test("onboarding shows three source options", async ({ page }) => {
+  test("onboarding shows four source options", async ({ page }) => {
     await loginViaUI(page, email);
 
     await expect(page.getByText("Connect your playbook")).toBeVisible({ timeout: 10_000 });
 
     // Use description text which is unique per source
+    await expect(page.getByText("Start with our ready-made sales playbook")).toBeVisible();
     await expect(page.getByText("Connect your Notion workspace")).toBeVisible();
     await expect(page.getByText("Link your Confluence space")).toBeVisible();
     await expect(page.getByText("Upload a playbook PDF")).toBeVisible();
@@ -76,6 +77,17 @@ test.describe("Onboarding Flow", () => {
 
     const uploadBtn = page.getByRole("button", { name: "Upload & Analyze" });
     await expect(uploadBtn).toBeEnabled();
+  });
+
+  test("selecting Taskbase Playbook shows Use Template & Analyze button", async ({ page }) => {
+    await loginViaUI(page, email);
+
+    await expect(page.getByText("Connect your playbook")).toBeVisible({ timeout: 10_000 });
+
+    await page.getByText("Start with our ready-made sales playbook").click();
+
+    const templateBtn = page.getByRole("button", { name: "Use Template & Analyze" });
+    await expect(templateBtn).toBeEnabled();
   });
 
   test("selecting Notion shows Connect & Analyze button", async ({ page }) => {
@@ -105,7 +117,11 @@ test.describe("Onboarding Flow", () => {
 
     await expect(page.getByText("Connect your playbook")).toBeVisible({ timeout: 10_000 });
 
-    // Select Notion first
+    // Select Taskbase template
+    await page.getByText("Start with our ready-made sales playbook").click();
+    await expect(page.getByRole("button", { name: "Use Template & Analyze" })).toBeVisible();
+
+    // Switch to Notion
     await page.getByText("Connect your Notion workspace").click();
     await expect(page.getByRole("button", { name: "Connect & Analyze" })).toBeVisible();
 
@@ -113,7 +129,7 @@ test.describe("Onboarding Flow", () => {
     await page.getByText("Upload a playbook PDF").click();
     await expect(page.getByRole("button", { name: "Upload & Analyze" })).toBeVisible();
 
-    // Switch back to Confluence
+    // Switch to Confluence
     await page.getByText("Link your Confluence space").click();
     await expect(page.getByRole("button", { name: "Connect & Analyze" })).toBeVisible();
   });

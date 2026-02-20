@@ -5,6 +5,7 @@ import { useSkills, useToggleSkillFulfilled } from "@/hooks/use-skills";
 import { useCreateStagedEdit } from "@/hooks/use-staged-edits";
 import { extractHeadings, type Heading } from "@/lib/extract-headings";
 import type { PlaybookSection } from "@/lib/types";
+import { PROVIDER_LABELS } from "@/lib/types";
 import { FileText, Clock, ChevronRight, CheckCircle2, AlertTriangle, XCircle, Pencil, X, Save, Loader2, Filter, ChevronsUpDown, Check, PanelRightClose, PanelRightOpen, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { ChatEditor } from "./ChatEditor";
@@ -388,6 +389,27 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange, initialSectio
   // Build tree from flat sections
   const sectionTree = useMemo(() => buildSectionTree(displaySections), [displaySections]);
 
+  // Group sections by provider (for sidebar headers when multiple sources exist)
+  const providerGroups = useMemo(() => {
+    const groups: { provider: string; label: string; count: number; tree: SectionTreeNode[] }[] = [];
+    const seen = new Set<string>();
+    for (const s of displaySections) {
+      if (!seen.has(s.provider)) {
+        seen.add(s.provider);
+        const providerSections = displaySections.filter((sec) => sec.provider === s.provider);
+        groups.push({
+          provider: s.provider,
+          label: PROVIDER_LABELS[s.provider] ?? s.provider,
+          count: providerSections.length,
+          tree: buildSectionTree(providerSections),
+        });
+      }
+    }
+    return groups;
+  }, [displaySections]);
+
+  const hasMultipleProviders = providerGroups.length > 1;
+
   const toggleExpanded = useCallback((id: string) => {
     setExpandedSections((prev) => {
       const next = new Set(prev);
@@ -609,19 +631,44 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange, initialSectio
               onSkillFilterChange={onSkillFilterChange}
             />
             <div className="flex-1 overflow-y-auto py-1">
-              {sectionTree.map((node) => (
-                <SectionTreeItem
-                  key={node.id}
-                  node={node}
-                  currentId={currentId}
-                  expandedSections={expandedSections}
-                  headingsMap={headingsMap}
-                  getSkillsForSection={getSkillsForSection}
-                  onSelect={selectSection}
-                  onToggle={toggleExpanded}
-                  level={0}
-                />
-              ))}
+              {hasMultipleProviders ? (
+                providerGroups.map((group) => (
+                  <div key={group.provider}>
+                    <div className="px-3 pt-3 pb-1">
+                      <span className="text-[10px] font-overline uppercase tracking-wider text-muted-foreground">
+                        {group.label} ({group.count})
+                      </span>
+                    </div>
+                    {group.tree.map((node) => (
+                      <SectionTreeItem
+                        key={node.id}
+                        node={node}
+                        currentId={currentId}
+                        expandedSections={expandedSections}
+                        headingsMap={headingsMap}
+                        getSkillsForSection={getSkillsForSection}
+                        onSelect={selectSection}
+                        onToggle={toggleExpanded}
+                        level={0}
+                      />
+                    ))}
+                  </div>
+                ))
+              ) : (
+                sectionTree.map((node) => (
+                  <SectionTreeItem
+                    key={node.id}
+                    node={node}
+                    currentId={currentId}
+                    expandedSections={expandedSections}
+                    headingsMap={headingsMap}
+                    getSkillsForSection={getSkillsForSection}
+                    onSelect={selectSection}
+                    onToggle={toggleExpanded}
+                    level={0}
+                  />
+                ))
+              )}
             </div>
           </div>
 
@@ -632,7 +679,7 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange, initialSectio
                 <h3 className="text-lg text-foreground">{current.title.replace(/^\u00A0+/, "")}</h3>
                 <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono bg-muted rounded px-2 py-0.5">
                   <Clock className="w-2.5 h-2.5" />
-                  {current.lastUpdated}
+                  {new Date(current.lastUpdated).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
                 </div>
                 {!editing ? (
                   <button

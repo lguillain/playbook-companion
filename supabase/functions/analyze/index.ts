@@ -2,11 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { analyzeSections } from "../_shared/analyze-sections.ts";
 import { env } from "../_shared/env.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 /**
  * Analyze saved playbook sections for skill coverage.
@@ -14,6 +10,7 @@ const corsHeaders = {
  * Called AFTER import has saved sections.
  */
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -55,9 +52,19 @@ Deno.serve(async (req) => {
 
     if (secError) throw secError;
     if (!sections || sections.length === 0) {
+      // No sections left — reset all skill evals to missing
+      await adminClient.from("section_skills").delete().eq("user_id", user.id);
+      await adminClient
+        .from("user_skills")
+        .update({ status: "missing", last_updated: null, section_title: null, coverage_note: null })
+        .eq("user_id", user.id);
+      await adminClient
+        .from("profiles")
+        .update({ analyzed_at: new Date().toISOString() })
+        .eq("id", user.id);
       return new Response(
-        JSON.stringify({ error: "No sections found. Import a playbook first." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ status: "completed", sectionsAnalyzed: 0 }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 

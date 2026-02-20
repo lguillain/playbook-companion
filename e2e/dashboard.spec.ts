@@ -124,4 +124,11 @@ test.describe("Dashboard & Navigation", () => {
     await textarea.fill("Hello, how can I improve my playbook?");
     await expect(textarea).toHaveValue("Hello, how can I improve my playbook?");
   });
+
+  // ── Footer ───────────────────────────────────────────────────────
+
+  test("app footer shows Powered by Taskbase", async ({ page }) => {
+    await expect(page.locator("footer").getByText("Powered by")).toBeVisible();
+    await expect(page.locator("footer").getByRole("link", { name: "Taskbase" })).toBeVisible();
+  });
 });

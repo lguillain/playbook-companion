@@ -174,7 +174,7 @@ Return this JSON structure:
     .update({ status: "missing", last_updated: null, section_title: null, coverage_note: null })
     .eq("user_id", userId);
 
-  const today = new Date().toISOString().split("T")[0];
+  const analyzedAt = new Date().toISOString();
   const mappedSkillIds = new Set<string>();
 
   // Build skill → date lookup from section dates
@@ -242,7 +242,7 @@ Return this JSON structure:
           .eq("skill_id", assessment.id);
       }
 
-      const skillDate = skillDateMap.get(assessment.id) ?? today;
+      const skillDate = skillDateMap.get(assessment.id) ?? analyzedAt;
       await adminClient
         .from("user_skills")
         .update({
@@ -254,6 +254,12 @@ Return this JSON structure:
         .eq("skill_id", assessment.id);
     }
   }
+
+  // Record when the analysis was run
+  await adminClient
+    .from("profiles")
+    .update({ analyzed_at: analyzedAt })
+    .eq("id", userId);
 
   return { sectionsAnalyzed: sections.length };
 }

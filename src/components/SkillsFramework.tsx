@@ -101,7 +101,7 @@ export const SkillsFramework = ({ onFillGap, statusFilter }: { onFillGap?: (skil
                       <div className="flex items-center gap-2">
                         {skill.lastUpdated && !skill.fulfilled && (
                           <span className={`text-[10px] font-mono ${outdated ? "text-destructive font-caption" : "text-muted-foreground"}`}>
-                            {skill.lastUpdated}
+                            {new Date(skill.lastUpdated).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
                           </span>
                         )}
                         {isActionable && !skill.fulfilled && (

@@ -206,7 +206,61 @@ test.describe("Chat", () => {
     await expect(page.getByText("Edit rejected")).toBeVisible({ timeout: 5_000 });
   });
 
-  // ── Group 4: Embedded Chat in Playbook Tab ───────────────────────
+  // ── Group 4: Edit Status Persistence from DB ───────────────────
+
+  test("edit status loaded from DB shows resolved state after reload", async ({ page }) => {
+    // Get a section ID for the staged edit
+    const { data: section } = await admin
+      .from("playbook_sections")
+      .select("id")
+      .eq("user_id", userId)
+      .limit(1)
+      .single();
+
+    // Insert an assistant chat message in the dashboard conversation
+    const { data: msg } = await admin
+      .from("chat_messages")
+      .insert({
+        conversation_id: "dashboard",
+        role: "assistant",
+        content: "Here is my suggested edit for your review:",
+        created_by: userId,
+      })
+      .select("id")
+      .single();
+
+    // Insert an approved staged edit linked to the chat message via message_id
+    await admin
+      .from("staged_edits")
+      .insert({
+        section_id: section!.id,
+        before_text: "Original text before edit",
+        after_text: "Improved text after edit",
+        status: "approved",
+        source: "chat",
+        message_id: msg!.id,
+        created_by: userId,
+      });
+
+    // Reload to load the seeded data from DB
+    await page.reload();
+
+    // The assistant message with the edit should be visible
+    await expect(page.getByText("Here is my suggested edit")).toBeVisible({ timeout: 10_000 });
+
+    // The edit card should show a status badge (resolved, not pending)
+    // DB stores "approved" — the badge text should reflect the resolved status
+    await expect(page.getByText("approved")).toBeVisible({ timeout: 5_000 });
+
+    // Accept/Reject action buttons should NOT appear for resolved edits
+    // (the DiffCard only renders action buttons when status === "pending")
+    const editCard = page.locator(".rounded-lg.border.p-3").first();
+    await expect(editCard).toBeVisible();
+    await expect(editCard.getByRole("button", { name: /Accept/i })).not.toBeVisible();
+    await expect(editCard.getByRole("button", { name: /Reject/i })).not.toBeVisible();
+  });
+
+  // ── Group 5: Embedded Chat in Playbook Tab ───────────────────────
 
   test("embedded chat shows section-specific welcome", async ({ page }) => {
     await page.getByRole("button", { name: "Playbook" }).click();
