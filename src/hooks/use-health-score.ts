@@ -9,9 +9,12 @@ function useAnalyzedAt() {
   return useQuery<string | null>({
     queryKey: ["analyzed-at"],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
       const { data, error } = await supabase
         .from("profiles")
         .select("analyzed_at")
+        .eq("id", user.id)
         .single();
       if (error) throw error;
       return data?.analyzed_at ?? null;
