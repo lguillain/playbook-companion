@@ -91,7 +91,8 @@ const tools = [
 async function executeTool(
   toolUse: { id: string; name: string; input: string },
   userId: string,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  messageId?: string,
 ): Promise<
   | { ok: true; edit: Record<string, unknown> }
   | { ok: false; error: string }
@@ -140,6 +141,7 @@ async function executeTool(
         after_text: afterText,
         source: "chat",
         created_by: userId,
+        ...(messageId ? { message_id: messageId } : {}),
       })
       .select()
       .single();
@@ -213,6 +215,7 @@ async function executeTool(
         after_text: content,
         source: "chat",
         created_by: userId,
+        ...(messageId ? { message_id: messageId } : {}),
       })
       .select()
       .single();
@@ -504,6 +507,18 @@ ${playbookContext}${skillsContext}`;
 
     // ── Transform the SSE stream ────────────────────────────────────
 
+    // Pre-create the assistant message row so staged edits can FK-reference it.
+    // Content will be updated with the real response once streaming finishes.
+    const assistantMessageId = crypto.randomUUID();
+    await supabase.from("chat_messages").insert({
+      id: assistantMessageId,
+      conversation_id: conversationId,
+      role: "assistant",
+      content: "",
+      section_id: sectionContext?.sectionId ?? null,
+      created_by: user.id,
+    });
+
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
     let fullResponse = "";
@@ -570,7 +585,8 @@ ${playbookContext}${skillsContext}`;
               const result = await executeTool(
                 currentToolUse,
                 user.id,
-                supabase
+                supabase,
+                assistantMessageId
               );
 
               if (result.ok) {
@@ -587,13 +603,13 @@ ${playbookContext}${skillsContext}`;
                 );
               }
 
-              // Build the tool_result and send a follow-up request to Claude
-              // so it can acknowledge the tool use to the user.
+              // Build the tool_result and send follow-up requests to Claude
+              // so it can acknowledge the tool use and optionally make more edits.
               const toolResultContent = result.ok
                 ? `Tool executed successfully. Staged edit created for section "${(result.edit as Record<string, unknown>).sectionTitle}".`
                 : `Tool failed: ${result.error}`;
 
-              const followUpMessages = [
+              const followUpMessages: { role: string; content: unknown }[] = [
                 ...messages,
                 {
                   role: "assistant",
@@ -613,8 +629,83 @@ ${playbookContext}${skillsContext}`;
               currentToolUse = null;
 
               try {
-                const followUp = await callClaude(ANTHROPIC_API_KEY, systemPrompt, followUpMessages);
+                // Loop: let Claude make additional tool calls if it wants to
+                let followUp = await callClaude(ANTHROPIC_API_KEY, systemPrompt, followUpMessages);
 
+                while (followUp.toolUse) {
+                  // Emit tool_start for the next edit
+                  controller.enqueue(
+                    encoder.encode(
+                      `data: ${JSON.stringify({ type: "tool_start", tool_name: followUp.toolUse.name })}\n\n`
+                    )
+                  );
+
+                  // Stream any interstitial text before the tool call
+                  if (followUp.text) {
+                    const { cleaned, options } = extractSuggestions(followUp.text);
+                    fullResponse += cleaned;
+                    controller.enqueue(
+                      encoder.encode(
+                        `data: ${JSON.stringify({ type: "text", text: cleaned })}\n\n`
+                      )
+                    );
+                    if (options) {
+                      controller.enqueue(
+                        encoder.encode(
+                          `data: ${JSON.stringify({ type: "suggestions", options })}\n\n`
+                        )
+                      );
+                    }
+                  }
+
+                  // Execute the tool
+                  const nextResult = await executeTool(
+                    followUp.toolUse,
+                    user.id,
+                    supabase,
+                    assistantMessageId
+                  );
+
+                  if (nextResult.ok) {
+                    controller.enqueue(
+                      encoder.encode(
+                        `data: ${JSON.stringify({ type: "staged_edit", edit: nextResult.edit })}\n\n`
+                      )
+                    );
+                  } else {
+                    controller.enqueue(
+                      encoder.encode(
+                        `data: ${JSON.stringify({ type: "tool_error", error: nextResult.error })}\n\n`
+                      )
+                    );
+                  }
+
+                  const nextToolResultContent = nextResult.ok
+                    ? `Tool executed successfully. Staged edit created for section "${(nextResult.edit as Record<string, unknown>).sectionTitle}".`
+                    : `Tool failed: ${nextResult.error}`;
+
+                  // Append the assistant turn + tool result for the next iteration
+                  followUpMessages.push(
+                    {
+                      role: "assistant",
+                      content: [
+                        ...(followUp.text ? [{ type: "text", text: followUp.text }] : []),
+                        { type: "tool_use", id: followUp.toolUse.id, name: followUp.toolUse.name, input: JSON.parse(followUp.toolUse.input || "{}") },
+                      ],
+                    },
+                    {
+                      role: "user",
+                      content: [
+                        { type: "tool_result", tool_use_id: followUp.toolUse.id, content: nextToolResultContent },
+                      ],
+                    },
+                  );
+
+                  // Ask Claude again — it may want yet another edit or to wrap up
+                  followUp = await callClaude(ANTHROPIC_API_KEY, systemPrompt, followUpMessages);
+                }
+
+                // No more tool calls — stream the final text
                 if (followUp.text) {
                   const { cleaned, options } = extractSuggestions(followUp.text);
                   fullResponse += cleaned;
@@ -650,17 +741,18 @@ ${playbookContext}${skillsContext}`;
                 );
               }
 
-              // Persist the text portions of the response before closing the stream
+              // Update the pre-created assistant message with the real content.
+              // If the response was empty, delete the placeholder row.
               if (fullResponse.trim()) {
                 await supabase
                   .from("chat_messages")
-                  .insert({
-                    conversation_id: conversationId,
-                    role: "assistant",
-                    content: fullResponse,
-                    section_id: sectionContext?.sectionId ?? null,
-                    created_by: user.id,
-                  });
+                  .update({ content: fullResponse })
+                  .eq("id", assistantMessageId);
+              } else {
+                await supabase
+                  .from("chat_messages")
+                  .delete()
+                  .eq("id", assistantMessageId);
               }
 
               controller.enqueue(encoder.encode(`data: [DONE]\n\n`));

@@ -58,6 +58,7 @@ export type StagedEditRow = {
   after_text: string;
   status: "pending" | "approved" | "rejected";
   source: "chat" | "manual" | null;
+  message_id: string | null;
   created_by: string | null;
   reviewed_by: string | null;
   reviewed_at: string | null;
@@ -163,6 +164,8 @@ export type StreamedEdit = {
   after: string;
   rationale: string;
   timestamp: string;
+  /** Present when loaded from DB; absent during live streaming (defaults to "pending"). */
+  status?: "pending" | "approved" | "rejected";
 };
 
 export type ChatMessage = {

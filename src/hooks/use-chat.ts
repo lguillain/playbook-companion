@@ -9,19 +9,36 @@ export function useChatHistory(conversationId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("chat_messages")
-        .select("*")
+        .select("*, staged_edits:staged_edits(id, section_id, before_text, after_text, created_at, status, playbook_sections!inner(title))")
         .eq("conversation_id", conversationId)
         .order("created_at", { ascending: true });
 
       if (error) throw error;
 
       return (data ?? []).map(
-        (m): ChatMessage => ({
-          id: m.id,
-          role: m.role as ChatMessage["role"],
-          content: m.content,
-          timestamp: m.created_at,
-        })
+        (m): ChatMessage => {
+          const edits: StreamedEdit[] | undefined =
+            m.role === "assistant" && Array.isArray(m.staged_edits) && m.staged_edits.length > 0
+              ? m.staged_edits.map((e: { id: string; section_id: string; before_text: string; after_text: string; created_at: string; status: string; playbook_sections: { title: string } }) => ({
+                  id: e.id,
+                  sectionId: e.section_id,
+                  sectionTitle: e.playbook_sections.title,
+                  before: e.before_text,
+                  after: e.after_text,
+                  rationale: "",
+                  timestamp: e.created_at,
+                  status: e.status as "pending" | "approved" | "rejected",
+                }))
+              : undefined;
+
+          return {
+            id: m.id,
+            role: m.role as ChatMessage["role"],
+            content: m.content,
+            timestamp: m.created_at,
+            edits,
+          };
+        }
       );
     },
     enabled: !!conversationId,

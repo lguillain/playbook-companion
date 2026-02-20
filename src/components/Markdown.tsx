@@ -1,6 +1,7 @@
 import { Children, isValidElement, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 
 type MarkdownProps = {
   children: string;
@@ -125,3 +126,52 @@ export const Markdown = ({ children, className = "" }: MarkdownProps) => {
     </div>
   );
 };
+
+/** Markdown renderer that supports <ins>/<del> tags for inline diff highlighting. */
+export const DiffMarkdown = ({ children, className = "" }: MarkdownProps) => (
+  <div className={`text-sm leading-relaxed ${className}`}>
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      rehypePlugins={[rehypeRaw]}
+      components={{
+        p: ({ children }) => (
+          <p className="text-sm text-secondary-foreground leading-relaxed mb-2">{children}</p>
+        ),
+        ul: ({ children }) => (
+          <ul className="list-disc ml-4 mb-2 space-y-0.5">{children}</ul>
+        ),
+        ol: ({ children }) => (
+          <ol className="list-decimal ml-4 mb-2 space-y-0.5">{children}</ol>
+        ),
+        li: ({ children }) => (
+          <li className="text-sm text-secondary-foreground">{children}</li>
+        ),
+        strong: ({ children }) => (
+          <strong className="font-subheading text-foreground">{children}</strong>
+        ),
+        em: ({ children }) => <em className="italic">{children}</em>,
+        h1: ({ children }) => <h1 className="text-lg text-foreground mt-5 mb-2">{children}</h1>,
+        h2: ({ children }) => <h2 className="text-base text-foreground mt-4 mb-2">{children}</h2>,
+        h3: ({ children }) => <h3 className="text-sm text-foreground mt-3 mb-1.5">{children}</h3>,
+        h4: ({ children }) => <h4 className="text-sm text-foreground mt-2 mb-1">{children}</h4>,
+        ins: ({ children }) => (
+          <ins className="bg-success/15 rounded-sm no-underline">{children}</ins>
+        ),
+        del: ({ children }) => (
+          <del className="bg-destructive/15 rounded-sm">{children}</del>
+        ),
+        hr: () => <hr className="border-border my-4" />,
+        a: ({ href, children }) => {
+          const safeHref = href && /^javascript:/i.test(href) ? undefined : href;
+          return (
+            <a href={safeHref} className="text-primary underline" target="_blank" rel="noopener noreferrer">
+              {children}
+            </a>
+          );
+        },
+      }}
+    >
+      {children}
+    </ReactMarkdown>
+  </div>
+);

@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useStagedEdits, useApproveEdit, useRejectEdit, useUnapproveEdit, useUnrejectEdit, useUpdateEditText } from "@/hooks/use-staged-edits";
-import { usePublish, useNotify } from "@/hooks/use-publish";
+import { usePublish } from "@/hooks/use-publish";
 import { useConnections } from "@/hooks/use-connections";
 import { ClipboardList, Check, X, Send, Bell, Sparkles, Edit3, Loader2, Eye, EyeOff, Pencil, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { DiffView } from "./DiffView";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { Markdown } from "./Markdown";
@@ -49,7 +50,7 @@ export const StagingPanel = () => {
   const unrejectEdit = useUnrejectEdit();
   const updateEditText = useUpdateEditText();
   const publish = usePublish();
-  const notify = useNotify();
+
   const [showRejected, setShowRejected] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState("");
@@ -80,17 +81,6 @@ export const StagingPanel = () => {
     }
   };
 
-  const handleNudge = async () => {
-    try {
-      const result = await notify.mutateAsync({
-        type: "slack",
-        message: "Your playbook has been updated! Check out the latest changes.",
-      });
-      toast.success(`Notified ${result.notified} team member(s)`);
-    } catch (err) {
-      toast.error((err as Error).message);
-    }
-  };
 
   return (
     <motion.div
@@ -133,18 +123,19 @@ export const StagingPanel = () => {
               {publish.isSuccess ? "Published!" : `Publish to ${publishLabel}`}
             </button>
           )}
-          <button
-            onClick={handleNudge}
-            disabled={notify.isPending}
-            className="flex items-center gap-1.5 rounded-lg bg-secondary px-4 py-2 text-sm font-subheading text-secondary-foreground disabled:opacity-30"
-          >
-            {notify.isPending ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Bell className="w-3.5 h-3.5" />
-            )}
-            Notify team
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                className="flex items-center gap-1.5 rounded-lg bg-secondary px-4 py-2 text-sm font-subheading text-secondary-foreground opacity-50 cursor-default"
+              >
+                <Bell className="w-3.5 h-3.5" />
+                Notify team
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Only available for users who have linked the Taskbase Sales Coach
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
 

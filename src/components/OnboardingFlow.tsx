@@ -54,7 +54,7 @@ function getDescendantIds(node: PageNode): string[] {
 }
 
 const sources = [
-  { id: "taskbase", name: "TaskBase Playbook", icon: "TB", desc: "Start with our ready-made sales playbook", isOAuth: false },
+  { id: "taskbase", name: "Taskbase Playbook", icon: "TB", desc: "Start with our ready-made sales playbook", isOAuth: false },
   { id: "notion", name: "Notion", icon: "N", desc: "Connect your Notion workspace", isOAuth: true },
   { id: "confluence", name: "Confluence", icon: "C", desc: "Link your Confluence space", isOAuth: true },
   { id: "pdf", name: "PDF Upload", icon: "P", desc: "Upload a playbook PDF", isOAuth: false },

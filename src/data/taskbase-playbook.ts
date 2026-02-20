@@ -1,9 +1,9 @@
 /**
- * TaskBase's ready-made sales playbook template.
+ * Taskbase's ready-made sales playbook template.
  * Covers all skill categories so users start with a complete baseline
  * they can customize for their own product/market.
  */
-export const TASKBASE_PLAYBOOK = `# TaskBase Sales Playbook
+export const TASKBASE_PLAYBOOK = `# Taskbase Sales Playbook
 
 ## How to Use This Playbook
 
@@ -155,7 +155,7 @@ Every section is designed to give you actionable guidance. Adapt the examples to
 ## Pitch Scripts
 
 ### Cold call opener:
-"Hi [Name], this is [Your Name] from TaskBase. I'm reaching out because I noticed you're scaling your sales team — congrats on the growth. Quick question: how are you onboarding new reps right now? Do they have a structured playbook to follow, or is it more ad-hoc?"
+"Hi [Name], this is [Your Name] from Taskbase. I'm reaching out because I noticed you're scaling your sales team — congrats on the growth. Quick question: how are you onboarding new reps right now? Do they have a structured playbook to follow, or is it more ad-hoc?"
 
 ### Email sequence — first touch:
 Subject: Your playbook is probably a PDF nobody reads
@@ -527,7 +527,7 @@ Map what you learn in discovery to the value you present in the demo:
 "You've got great content in Notion. Let me connect to a similar workspace and show you how it all comes together..." → Show Notion import flow, emphasize that scattered pages become one structured playbook.
 
 **For a company with no playbook:**
-"Starting from scratch is actually an advantage — you get to build it right from day one. Let me show you our template..." → Use the TaskBase template playbook, show how comprehensive it is out of the box.
+"Starting from scratch is actually an advantage — you get to build it right from day one. Let me show you our template..." → Use the Taskbase template playbook, show how comprehensive it is out of the box.
 
 ## Solution Fit Assessment
 

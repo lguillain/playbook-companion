@@ -329,10 +329,7 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
     setIsListening(true);
   };
 
-  const preservedEditsRef = useRef<Map<string, StreamedEdit[]>>(new Map());
-
-  // Build display messages: history from DB + local optimistic messages.
-  // Reattach preserved edits to DB messages that were previously local messages.
+  // Build display messages: history from DB (now includes edits via message_id join) + local optimistic messages.
   const messages = useMemo(() => {
     const initialMsg: ChatMessage = {
       id: "initial",
@@ -343,14 +340,7 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
       timestamp: new Date().toISOString(),
     };
 
-    const dbMessages = (history ?? []).map((msg) => {
-      if (msg.role === "assistant" && !msg.edits) {
-        const preserved = preservedEditsRef.current.get(msg.content);
-        if (preserved) return { ...msg, edits: preserved };
-      }
-      return msg;
-    });
-    return [initialMsg, ...dbMessages, ...localMessages];
+    return [initialMsg, ...(history ?? []), ...localMessages];
   }, [history, localMessages, isEmbedded, currentSection]);
 
   // Reset local messages when conversation changes
@@ -358,21 +348,13 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
     setLocalMessages([]);
     setEditStatuses({});
     setSuggestions([]);
-    preservedEditsRef.current.clear();
   }, [conversationId]);
 
-  // Clear local messages once DB history has caught up (avoid duplicates),
-  // but preserve any edits attached to local messages since the DB doesn't store them.
+  // Clear local messages once DB history has caught up (avoid duplicates).
+  // Edits are now linked via message_id in the DB, so no need to preserve them locally.
   const prevHistoryLenRef = useRef(0);
   useEffect(() => {
     if (history && history.length > prevHistoryLenRef.current && localMessages.length > 0 && !isStreaming) {
-      // Capture edits from local messages before clearing them
-      for (const msg of localMessages) {
-        if (msg.edits && msg.edits.length > 0) {
-          // Key by the assistant message content to match with DB history
-          preservedEditsRef.current.set(msg.content, msg.edits);
-        }
-      }
       setLocalMessages([]);
     }
     prevHistoryLenRef.current = history?.length ?? 0;
@@ -431,6 +413,9 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
 
   const handleSendText = async (text: string) => {
     if (!text.trim() || isStreaming) return;
+
+    // Stop voice recognition so it doesn't keep writing to the input
+    recognitionRef.current?.stop();
 
     // Clear suggestions when the user sends any message
     setSuggestions([]);
@@ -529,7 +514,7 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
                     edit={edit}
                     onAccept={handleAccept}
                     onReject={handleReject}
-                    status={editStatuses[edit.id] ?? "pending"}
+                    status={editStatuses[edit.id] ?? edit.status ?? "pending"}
                     isProcessing={processingEditId === edit.id}
                   />
                 ))}
@@ -556,7 +541,7 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
                   edit={edit}
                   onAccept={handleAccept}
                   onReject={handleReject}
-                  status={editStatuses[edit.id] ?? "pending"}
+                  status={editStatuses[edit.id] ?? edit.status ?? "pending"}
                   isProcessing={processingEditId === edit.id}
                 />
               ))}
@@ -577,7 +562,7 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
                   edit={edit}
                   onAccept={handleAccept}
                   onReject={handleReject}
-                  status={editStatuses[edit.id] ?? "pending"}
+                  status={editStatuses[edit.id] ?? edit.status ?? "pending"}
                   isProcessing={processingEditId === edit.id}
                 />
               ))}
@@ -598,7 +583,7 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
           </motion.div>
         )}
 
-        {/* Loading dots */}
+        {/* Loading dots — initial state before any content appears */}
         {isStreaming && !streamingContent && !isToolRunning && stagedEdits.length === 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
             <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -616,6 +601,27 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
                 ))}
               </div>
             </div>
+          </motion.div>
+        )}
+
+        {/* Still-working indicator — shown between edits or after text when response is ongoing */}
+        {isStreaming && !isToolRunning && (streamingContent || stagedEdits.length > 0) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center gap-2 pl-10 py-1"
+          >
+            <div className="flex gap-1">
+              {[0, 1, 2].map((i) => (
+                <motion.div
+                  key={i}
+                  className="w-1 h-1 rounded-full bg-primary/40"
+                  animate={{ opacity: [0.3, 1, 0.3] }}
+                  transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
+                />
+              ))}
+            </div>
+            <span className="text-[11px] text-muted-foreground">Still working…</span>
           </motion.div>
         )}
 
