@@ -10,6 +10,7 @@ export default function Login() {
   const mode = location.pathname === "/signup" ? "signup" : "login";
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -26,9 +27,8 @@ export default function Login() {
     e.preventDefault();
     setError(null);
     const form = new FormData(e.currentTarget);
-    const email = form.get("email") as string;
-    if (!email.endsWith("@taskbase.com")) {
-      setError("Sign-up is restricted to Taskbase emails.");
+    if (!disclaimerAccepted) {
+      setError("You must accept the prototype disclaimer to sign up.");
       return;
     }
     setSubmitting(true);
@@ -52,16 +52,16 @@ export default function Login() {
           <span className="text-lg font-bold text-foreground tracking-tight">Playbook Manager</span>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-6 shadow-card">
+        <div className="rounded-lg border border-border bg-card p-5 shadow-card">
           <h2 className="text-lg font-semibold text-foreground mb-1">
             {mode === "login" ? "Sign in" : "Create account"}
           </h2>
-          <p className="text-sm text-muted-foreground mb-6">
+          <p className="text-sm text-muted-foreground mb-4">
             {mode === "login" ? "Enter your credentials to continue" : "Set up your team account"}
           </p>
 
           {mode === "login" ? (
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleLogin} className="space-y-3">
               <div>
                 <label htmlFor="login-email" className="block text-xs font-medium text-foreground mb-1.5">Email</label>
                 <input
@@ -70,7 +70,7 @@ export default function Login() {
                   name="email"
                   autoComplete="email"
                   required
-                  className="w-full rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
                   placeholder="you@company.com"
                 />
               </div>
@@ -83,9 +83,14 @@ export default function Login() {
                   autoComplete="current-password"
                   required
                   minLength={6}
-                  className="w-full rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
                   placeholder="••••••••"
                 />
+              </div>
+              <div className="flex justify-end">
+                <Link to="/forgot-password" className="text-xs text-primary hover:underline">
+                  Forgot password?
+                </Link>
               </div>
               {error && <p className="text-xs text-destructive font-medium">{error}</p>}
               <button
@@ -98,16 +103,16 @@ export default function Login() {
               </button>
             </form>
           ) : (
-            <form onSubmit={handleSignup} className="space-y-4">
+            <form onSubmit={handleSignup} className="space-y-3">
               <div>
                 <label htmlFor="signup-name" className="block text-xs font-medium text-foreground mb-1.5">Full name</label>
                 <input
                   type="text"
                   id="signup-name"
                   name="name"
-                  autoComplete="name"
+                  autoComplete="off"
                   required
-                  className="w-full rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
                   placeholder="Jane Smith"
                 />
               </div>
@@ -119,7 +124,7 @@ export default function Login() {
                   name="email"
                   autoComplete="email"
                   required
-                  className="w-full rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
                   placeholder="you@company.com"
                 />
               </div>
@@ -132,10 +137,21 @@ export default function Login() {
                   autoComplete="new-password"
                   required
                   minLength={6}
-                  className="w-full rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
                   placeholder="••••••••"
                 />
               </div>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={disclaimerAccepted}
+                  onChange={(e) => setDisclaimerAccepted(e.target.checked)}
+                  className="mt-0.5 rounded border-border"
+                />
+                <span className="text-xs text-muted-foreground leading-relaxed">
+                  This is an early-stage prototype with limited spots. If no spots are available you'll be placed on a waiting list. Features may change and data may be reset without notice. No warranties are provided. By signing up you agree to be contacted by Taskbase.
+                </span>
+              </label>
               {error && <p className="text-xs text-destructive font-medium">{error}</p>}
               <button
                 type="submit"

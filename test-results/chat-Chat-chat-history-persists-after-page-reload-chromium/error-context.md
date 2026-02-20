@@ -1,0 +1,379 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - img [ref=e8]
+          - generic [ref=e10]: Playbook Manager
+        - navigation [ref=e11]:
+          - button "Dashboard" [ref=e12] [cursor=pointer]
+          - button "Playbook" [ref=e13] [cursor=pointer]
+          - button "Review & Publish" [ref=e14] [cursor=pointer]
+          - button "Integrations" [ref=e15] [cursor=pointer]
+        - generic [ref=e16]:
+          - generic [ref=e17]: Chat User
+          - generic [ref=e18]: CU
+          - button "Sign out" [ref=e19] [cursor=pointer]:
+            - img [ref=e20]
+    - main [ref=e23]:
+      - generic [ref=e24]:
+        - generic [ref=e26]:
+          - generic [ref=e27]:
+            - generic [ref=e28]: Playbook Health
+            - generic [ref=e29]: "0"
+            - generic [ref=e30]: / 100
+            - img [ref=e31]
+          - generic [ref=e34]:
+            - button "Covered 0" [ref=e35] [cursor=pointer]:
+              - img [ref=e36]
+              - generic [ref=e39]: Covered
+              - generic [ref=e40]: "0"
+            - button "Partial 0" [ref=e41] [cursor=pointer]:
+              - img [ref=e42]
+              - generic [ref=e44]: Partial
+              - generic [ref=e45]: "0"
+            - button "Missing 50" [ref=e46] [cursor=pointer]:
+              - img [ref=e47]
+              - generic [ref=e51]: Missing
+              - generic [ref=e52]: "50"
+            - button "Outdated 0" [ref=e53] [cursor=pointer]:
+              - img [ref=e54]
+              - generic [ref=e57]: Outdated
+              - generic [ref=e58]: "0"
+        - generic [ref=e59]:
+          - generic [ref=e60]:
+            - generic [ref=e62]:
+              - heading "Skills Framework" [level=2] [ref=e64]
+              - paragraph [ref=e65]: Coverage across sales competencies
+            - generic [ref=e66]:
+              - generic [ref=e67]:
+                - generic [ref=e68]:
+                  - generic [ref=e69]: ICP & Problem Landscape
+                  - generic [ref=e70]: 0%
+                - generic [ref=e72]:
+                  - generic [ref=e73] [cursor=pointer]:
+                    - generic [ref=e74]:
+                      - img [ref=e75]
+                      - generic [ref=e79]: ICP Definition
+                    - generic [ref=e81]: Fill →
+                  - generic [ref=e82] [cursor=pointer]:
+                    - generic [ref=e83]:
+                      - img [ref=e84]
+                      - generic [ref=e88]: ICP Fit Assessment & Red Flags
+                    - generic [ref=e90]: Fill →
+                  - generic [ref=e91] [cursor=pointer]:
+                    - generic [ref=e92]:
+                      - img [ref=e93]
+                      - generic [ref=e97]: Persona Challenges & Success Metrics
+                    - generic [ref=e99]: Fill →
+                  - generic [ref=e100] [cursor=pointer]:
+                    - generic [ref=e101]:
+                      - img [ref=e102]
+                      - generic [ref=e106]: Decision-Maker Roles & Buying Groups
+                    - generic [ref=e108]: Fill →
+                  - generic [ref=e109] [cursor=pointer]:
+                    - generic [ref=e110]:
+                      - img [ref=e111]
+                      - generic [ref=e115]: Use Cases & Proven Value
+                    - generic [ref=e117]: Fill →
+              - generic [ref=e118]:
+                - generic [ref=e119]:
+                  - generic [ref=e120]: Value Proposition & Messaging
+                  - generic [ref=e121]: 0%
+                - generic [ref=e123]:
+                  - generic [ref=e124] [cursor=pointer]:
+                    - generic [ref=e125]:
+                      - img [ref=e126]
+                      - generic [ref=e130]: Core Value Proposition
+                    - generic [ref=e132]: Fill →
+                  - generic [ref=e133] [cursor=pointer]:
+                    - generic [ref=e134]:
+                      - img [ref=e135]
+                      - generic [ref=e139]: Persona-Specific Messaging
+                    - generic [ref=e141]: Fill →
+                  - generic [ref=e142] [cursor=pointer]:
+                    - generic [ref=e143]:
+                      - img [ref=e144]
+                      - generic [ref=e148]: Pitch Scripts
+                    - generic [ref=e150]: Fill →
+                  - generic [ref=e151] [cursor=pointer]:
+                    - generic [ref=e152]:
+                      - img [ref=e153]
+                      - generic [ref=e157]: Objection Handling Foundations
+                    - generic [ref=e159]: Fill →
+                  - generic [ref=e160] [cursor=pointer]:
+                    - generic [ref=e161]:
+                      - img [ref=e162]
+                      - generic [ref=e166]: Product Capabilities & Customer Outcomes
+                    - generic [ref=e168]: Fill →
+              - generic [ref=e169]:
+                - generic [ref=e170]:
+                  - generic [ref=e171]: Sales Vocabulary & Buyer Language
+                  - generic [ref=e172]: 0%
+                - generic [ref=e174]:
+                  - generic [ref=e175] [cursor=pointer]:
+                    - generic [ref=e176]:
+                      - img [ref=e177]
+                      - generic [ref=e181]: Internal Sales Terminology
+                    - generic [ref=e183]: Fill →
+                  - generic [ref=e184] [cursor=pointer]:
+                    - generic [ref=e185]:
+                      - img [ref=e186]
+                      - generic [ref=e190]: Buyer-Facing Terminology
+                    - generic [ref=e192]: Fill →
+                  - generic [ref=e193] [cursor=pointer]:
+                    - generic [ref=e194]:
+                      - img [ref=e195]
+                      - generic [ref=e199]: Terms to Avoid & Correct Usage
+                    - generic [ref=e201]: Fill →
+                  - generic [ref=e202] [cursor=pointer]:
+                    - generic [ref=e203]:
+                      - img [ref=e204]
+                      - generic [ref=e208]: Key Industry Terms
+                    - generic [ref=e210]: Fill →
+                  - generic [ref=e211] [cursor=pointer]:
+                    - generic [ref=e212]:
+                      - img [ref=e213]
+                      - generic [ref=e217]: Correct Language Examples
+                    - generic [ref=e219]: Fill →
+              - generic [ref=e220]:
+                - generic [ref=e221]:
+                  - generic [ref=e222]: Qualification & Risk Assessment
+                  - generic [ref=e223]: 0%
+                - generic [ref=e225]:
+                  - generic [ref=e226] [cursor=pointer]:
+                    - generic [ref=e227]:
+                      - img [ref=e228]
+                      - generic [ref=e232]: Qualification Methodology
+                    - generic [ref=e234]: Fill →
+                  - generic [ref=e235] [cursor=pointer]:
+                    - generic [ref=e236]:
+                      - img [ref=e237]
+                      - generic [ref=e241]: ICP Fit in Qualification
+                    - generic [ref=e243]: Fill →
+                  - generic [ref=e244] [cursor=pointer]:
+                    - generic [ref=e245]:
+                      - img [ref=e246]
+                      - generic [ref=e250]: Risk Detection Guidance
+                    - generic [ref=e252]: Fill →
+                  - generic [ref=e253] [cursor=pointer]:
+                    - generic [ref=e254]:
+                      - img [ref=e255]
+                      - generic [ref=e259]: Deal Health Flags
+                    - generic [ref=e261]: Fill →
+                  - generic [ref=e262] [cursor=pointer]:
+                    - generic [ref=e263]:
+                      - img [ref=e264]
+                      - generic [ref=e268]: True Requirements vs Nice-to-Haves
+                    - generic [ref=e270]: Fill →
+              - generic [ref=e271]:
+                - generic [ref=e272]:
+                  - generic [ref=e273]: Sales Process & Meeting Sequences
+                  - generic [ref=e274]: 0%
+                - generic [ref=e276]:
+                  - generic [ref=e277] [cursor=pointer]:
+                    - generic [ref=e278]:
+                      - img [ref=e279]
+                      - generic [ref=e283]: Sales Process Overview
+                    - generic [ref=e285]: Fill →
+                  - generic [ref=e286] [cursor=pointer]:
+                    - generic [ref=e287]:
+                      - img [ref=e288]
+                      - generic [ref=e292]: Stage Exit Criteria
+                    - generic [ref=e294]: Fill →
+                  - generic [ref=e295] [cursor=pointer]:
+                    - generic [ref=e296]:
+                      - img [ref=e297]
+                      - generic [ref=e301]: Meeting Sequences
+                    - generic [ref=e303]: Fill →
+                  - generic [ref=e304] [cursor=pointer]:
+                    - generic [ref=e305]:
+                      - img [ref=e306]
+                      - generic [ref=e310]: Process Best Practices & Examples
+                    - generic [ref=e312]: Fill →
+                  - generic [ref=e313] [cursor=pointer]:
+                    - generic [ref=e314]:
+                      - img [ref=e315]
+                      - generic [ref=e319]: Common Mistakes & What Good Looks Like
+                    - generic [ref=e321]: Fill →
+              - generic [ref=e322]:
+                - generic [ref=e323]:
+                  - generic [ref=e324]: Discovery & Customer-Centric Questioning
+                  - generic [ref=e325]: 0%
+                - generic [ref=e327]:
+                  - generic [ref=e328] [cursor=pointer]:
+                    - generic [ref=e329]:
+                      - img [ref=e330]
+                      - generic [ref=e334]: Company-Specific Discovery Questions
+                    - generic [ref=e336]: Fill →
+                  - generic [ref=e337] [cursor=pointer]:
+                    - generic [ref=e338]:
+                      - img [ref=e339]
+                      - generic [ref=e343]: Stakeholder Mapping Questions
+                    - generic [ref=e345]: Fill →
+                  - generic [ref=e346] [cursor=pointer]:
+                    - generic [ref=e347]:
+                      - img [ref=e348]
+                      - generic [ref=e352]: Discovery-to-Value Connection
+                    - generic [ref=e354]: Fill →
+                  - generic [ref=e355] [cursor=pointer]:
+                    - generic [ref=e356]:
+                      - img [ref=e357]
+                      - generic [ref=e361]: True Requirements Probing
+                    - generic [ref=e363]: Fill →
+                  - generic [ref=e364] [cursor=pointer]:
+                    - generic [ref=e365]:
+                      - img [ref=e366]
+                      - generic [ref=e370]: Decision Process Uncovering
+                    - generic [ref=e372]: Fill →
+              - generic [ref=e373]:
+                - generic [ref=e374]:
+                  - generic [ref=e375]: Demo & Solution Fit
+                  - generic [ref=e376]: 0%
+                - generic [ref=e378]:
+                  - generic [ref=e379] [cursor=pointer]:
+                    - generic [ref=e380]:
+                      - img [ref=e381]
+                      - generic [ref=e385]: Demo Storyline & Sequence
+                    - generic [ref=e387]: Fill →
+                  - generic [ref=e388] [cursor=pointer]:
+                    - generic [ref=e389]:
+                      - img [ref=e390]
+                      - generic [ref=e394]: Customer-Specific Demo Examples
+                    - generic [ref=e396]: Fill →
+                  - generic [ref=e397] [cursor=pointer]:
+                    - generic [ref=e398]:
+                      - img [ref=e399]
+                      - generic [ref=e403]: Solution Fit Assessment
+                    - generic [ref=e405]: Fill →
+                  - generic [ref=e406] [cursor=pointer]:
+                    - generic [ref=e407]:
+                      - img [ref=e408]
+                      - generic [ref=e412]: Persona-Based Demo Adaptation
+                    - generic [ref=e414]: Fill →
+                  - generic [ref=e415] [cursor=pointer]:
+                    - generic [ref=e416]:
+                      - img [ref=e417]
+                      - generic [ref=e421]: Risk Areas & Humility
+                    - generic [ref=e423]: Fill →
+              - generic [ref=e424]:
+                - generic [ref=e425]:
+                  - generic [ref=e426]: Objection & Pricing Handling
+                  - generic [ref=e427]: 0%
+                - generic [ref=e429]:
+                  - generic [ref=e430] [cursor=pointer]:
+                    - generic [ref=e431]:
+                      - img [ref=e432]
+                      - generic [ref=e436]: Context-Aware Objection Handling
+                    - generic [ref=e438]: Fill →
+                  - generic [ref=e439] [cursor=pointer]:
+                    - generic [ref=e440]:
+                      - img [ref=e441]
+                      - generic [ref=e445]: Persona-Specific Objection Patterns
+                    - generic [ref=e447]: Fill →
+                  - generic [ref=e448] [cursor=pointer]:
+                    - generic [ref=e449]:
+                      - img [ref=e450]
+                      - generic [ref=e454]: Pricing Question Guidelines
+                    - generic [ref=e456]: Fill →
+                  - generic [ref=e457] [cursor=pointer]:
+                    - generic [ref=e458]:
+                      - img [ref=e459]
+                      - generic [ref=e463]: Top Rep Response Examples
+                    - generic [ref=e465]: Fill →
+                  - generic [ref=e466] [cursor=pointer]:
+                    - generic [ref=e467]:
+                      - img [ref=e468]
+                      - generic [ref=e472]: Trust Preservation Do's & Don'ts
+                    - generic [ref=e474]: Fill →
+              - generic [ref=e475]:
+                - generic [ref=e476]:
+                  - generic [ref=e477]: Tools, Tech Stack & Usage
+                  - generic [ref=e478]: 0%
+                - generic [ref=e480]:
+                  - generic [ref=e481] [cursor=pointer]:
+                    - generic [ref=e482]:
+                      - img [ref=e483]
+                      - generic [ref=e487]: CRM Usage Rules & Fields
+                    - generic [ref=e489]: Fill →
+                  - generic [ref=e490] [cursor=pointer]:
+                    - generic [ref=e491]:
+                      - img [ref=e492]
+                      - generic [ref=e496]: Sales Engagement Tools
+                    - generic [ref=e498]: Fill →
+                  - generic [ref=e499] [cursor=pointer]:
+                    - generic [ref=e500]:
+                      - img [ref=e501]
+                      - generic [ref=e505]: Handover Processes
+                    - generic [ref=e507]: Fill →
+                  - generic [ref=e508] [cursor=pointer]:
+                    - generic [ref=e509]:
+                      - img [ref=e510]
+                      - generic [ref=e514]: Meeting Notes Standards
+                    - generic [ref=e516]: Fill →
+                  - generic [ref=e517] [cursor=pointer]:
+                    - generic [ref=e518]:
+                      - img [ref=e519]
+                      - generic [ref=e523]: Forecasting Expectations
+                    - generic [ref=e525]: Fill →
+              - generic [ref=e526]:
+                - generic [ref=e527]:
+                  - generic [ref=e528]: Opportunity Management & Deal Control
+                  - generic [ref=e529]: 0%
+                - generic [ref=e531]:
+                  - generic [ref=e532] [cursor=pointer]:
+                    - generic [ref=e533]:
+                      - img [ref=e534]
+                      - generic [ref=e538]: Mutual Commitment Checklists
+                    - generic [ref=e540]: Fill →
+                  - generic [ref=e541] [cursor=pointer]:
+                    - generic [ref=e542]:
+                      - img [ref=e543]
+                      - generic [ref=e547]: Next-Step Control Techniques
+                    - generic [ref=e549]: Fill →
+                  - generic [ref=e550] [cursor=pointer]:
+                    - generic [ref=e551]:
+                      - img [ref=e552]
+                      - generic [ref=e556]: Internal Alignment Playbook
+                    - generic [ref=e558]: Fill →
+                  - generic [ref=e559] [cursor=pointer]:
+                    - generic [ref=e560]:
+                      - img [ref=e561]
+                      - generic [ref=e565]: Opportunity Prioritization
+                    - generic [ref=e567]: Fill →
+                  - generic [ref=e568] [cursor=pointer]:
+                    - generic [ref=e569]:
+                      - img [ref=e570]
+                      - generic [ref=e574]: Decision Process Understanding
+                    - generic [ref=e576]: Fill →
+          - generic [ref=e578]:
+            - generic [ref=e579]:
+              - img [ref=e581]
+              - generic [ref=e583]:
+                - heading "AI Assistant" [level=2] [ref=e584]
+                - paragraph [ref=e585]: Draft and edit playbook content
+            - generic [ref=e586]:
+              - generic [ref=e587]:
+                - img [ref=e589]
+                - generic [ref=e594]:
+                  - paragraph [ref=e595]: Hi! I'm your playbook assistant. Just tell me what you want to add or change — I'll figure out where it goes.
+                  - paragraph [ref=e596]: You can paste notes, describe a new technique, or ask me to fill a gap. I'll draft the content and place it in the right section for your review.
+              - generic [ref=e597]:
+                - img [ref=e599]
+                - generic [ref=e604]: "Remember this test phrase: pineapple lighthouse"
+              - generic [ref=e605]:
+                - img [ref=e607]
+                - paragraph [ref=e613]: Got it — I'll remember "pineapple lighthouse" for you.
+            - generic [ref=e615]:
+              - textbox "Ask me to draft content, fill gaps, or edit sections..." [ref=e616]
+              - button "Voice input" [ref=e617] [cursor=pointer]:
+                - img [ref=e618]
+              - button [disabled] [ref=e621]:
+                - img [ref=e622]
+```

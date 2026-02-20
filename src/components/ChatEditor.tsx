@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Sparkles, Bot, User, Mic, MicOff, GitBranch, Check, X, Loader2, Maximize2, FileText, ArrowRight } from "lucide-react";
+import { Send, Sparkles, Bot, User, Mic, MicOff, GitBranch, Check, X, Loader2, Maximize2, FileText, ArrowRight, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import type { ChatMessage, StreamedEdit, PlaybookSection } from "@/lib/types";
 import { useChatStream, useChatHistory } from "@/hooks/use-chat";
-import { useApproveEdit, useRejectEdit } from "@/hooks/use-staged-edits";
+import { useApproveEdit, useRejectEdit, useUpdateEditText } from "@/hooks/use-staged-edits";
 import { Markdown } from "./Markdown";
 import { DiffView } from "./DiffView";
+import { MarkdownEditor } from "./MarkdownEditor";
 
 // ── Section link card ────────────────────────────────────────────────
 
@@ -73,21 +74,71 @@ type DiffCardProps = {
 const DiffCard = ({ edit, onAccept, onReject, status, isProcessing }: DiffCardProps) => {
   const isResolved = status !== "pending";
   const [open, setOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editDraft, setEditDraft] = useState("");
+  const [localAfter, setLocalAfter] = useState<string | null>(null);
+  const updateEditText = useUpdateEditText();
 
-  const diffContent = (fullSize: boolean) => (
-    <DiffView before={edit.before} after={edit.after} fullSize={fullSize} />
-  );
+  const effectiveAfter = localAfter ?? edit.after;
+
+  const startEditing = () => {
+    setEditDraft(effectiveAfter);
+    setIsEditing(true);
+  };
+
+  const handleSave = () => {
+    updateEditText.mutate(
+      { editId: edit.id, afterText: editDraft },
+      {
+        onSuccess: () => {
+          setLocalAfter(editDraft);
+          setIsEditing(false);
+        },
+      },
+    );
+  };
+
+  const diffContent = (fullSize: boolean) =>
+    isEditing ? (
+      <div className="space-y-3">
+        {edit.before && (
+          <div className={`rounded-lg border border-border bg-muted/50 ${fullSize ? "p-3" : "p-2"}`}>
+            <div className={`${fullSize ? "text-xs" : "text-[9px]"} font-semibold text-muted-foreground mb-1.5`}>
+              Current version (read-only)
+            </div>
+            <Markdown>{edit.before}</Markdown>
+          </div>
+        )}
+        <MarkdownEditor markdown={editDraft} onChange={setEditDraft} />
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={() => setIsEditing(false)}
+            className="rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            disabled={!editDraft.trim() || editDraft === effectiveAfter || updateEditText.isPending}
+            onClick={handleSave}
+            className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-30 transition-opacity"
+          >
+            {updateEditText.isPending ? "Saving..." : "Save"}
+          </button>
+        </div>
+      </div>
+    ) : (
+      <DiffView before={edit.before} after={effectiveAfter} fullSize={fullSize} />
+    );
 
   const actionButtons = (fullSize: boolean) =>
-    !isResolved ? (
+    !isResolved && !isEditing ? (
       <div className={`flex gap-2 ${fullSize ? "pt-2" : "pt-1"}`}>
         <button
-          onClick={() => { onAccept(edit.id); setOpen(false); }}
-          disabled={isProcessing}
-          className={`flex-1 flex items-center justify-center gap-1 rounded-md bg-success/15 hover:bg-success/25 px-2 ${fullSize ? "py-2 text-sm" : "py-1.5 text-[11px]"} font-semibold text-success transition-colors disabled:opacity-30`}
+          onClick={startEditing}
+          className={`flex items-center justify-center gap-1 rounded-md border border-border hover:bg-muted/50 px-2 ${fullSize ? "py-2 text-sm" : "py-1.5 text-[11px]"} font-medium text-muted-foreground hover:text-foreground transition-colors`}
         >
-          {isProcessing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-          Accept
+          <Pencil className="w-3 h-3" />
+          Edit
         </button>
         <button
           onClick={() => { onReject(edit.id); setOpen(false); }}
@@ -96,6 +147,14 @@ const DiffCard = ({ edit, onAccept, onReject, status, isProcessing }: DiffCardPr
         >
           {isProcessing ? <Loader2 className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />}
           Reject
+        </button>
+        <button
+          onClick={() => { onAccept(edit.id); setOpen(false); }}
+          disabled={isProcessing}
+          className={`flex-1 flex items-center justify-center gap-1 rounded-md bg-success/15 hover:bg-success/25 px-2 ${fullSize ? "py-2 text-sm" : "py-1.5 text-[11px]"} font-semibold text-success transition-colors disabled:opacity-30`}
+        >
+          {isProcessing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+          Accept
         </button>
       </div>
     ) : null;
@@ -127,16 +186,18 @@ const DiffCard = ({ edit, onAccept, onReject, status, isProcessing }: DiffCardPr
               </span>
             )}
           </div>
-          <button
-            onClick={() => setOpen(true)}
-            className="flex items-center gap-1 text-[9px] font-semibold text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Maximize2 className="w-3 h-3" />
-            Expand
-          </button>
+          {!isEditing && (
+            <button
+              onClick={() => setOpen(true)}
+              className="flex items-center gap-1 text-[9px] font-semibold text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Maximize2 className="w-3 h-3" />
+              Expand
+            </button>
+          )}
         </div>
 
-        {edit.rationale && (
+        {edit.rationale && !isEditing && (
           <p className="text-[11px] text-muted-foreground italic leading-snug">
             {edit.rationale}
           </p>
@@ -177,7 +238,7 @@ const DiffCard = ({ edit, onAccept, onReject, status, isProcessing }: DiffCardPr
               </button>
             </div>
 
-            {edit.rationale && (
+            {edit.rationale && !isEditing && (
               <p className="text-sm text-muted-foreground italic leading-snug">
                 {edit.rationale}
               </p>
@@ -212,13 +273,14 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
   );
 
   const { data: history } = useChatHistory(conversationId);
-  const { sendMessage: streamMessage, isStreaming, streamingContent, stagedEdits, isToolRunning, clearStream } = useChatStream();
+  const { sendMessage: streamMessage, isStreaming, streamingContent, stagedEdits, suggestions: streamSuggestions, isToolRunning, clearStream } = useChatStream();
   const approveEdit = useApproveEdit();
   const rejectEdit = useRejectEdit();
 
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [editStatuses, setEditStatuses] = useState<Record<string, "accepted" | "rejected">>({});
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [processingEditId, setProcessingEditId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -295,6 +357,7 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
   useEffect(() => {
     setLocalMessages([]);
     setEditStatuses({});
+    setSuggestions([]);
     preservedEditsRef.current.clear();
   }, [conversationId]);
 
@@ -369,6 +432,9 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
   const handleSendText = async (text: string) => {
     if (!text.trim() || isStreaming) return;
 
+    // Clear suggestions when the user sends any message
+    setSuggestions([]);
+
     const userMsg: ChatMessage = {
       id: `local-${Date.now()}`,
       role: "user",
@@ -402,6 +468,8 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
           },
         ]);
       }
+      // Persist suggestions from this response before clearing stream state
+      setSuggestions(result.suggestions);
       clearStream();
     } catch {
       // On error, keep local messages visible so user sees what they sent
@@ -547,6 +615,27 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
                   />
                 ))}
               </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Suggestion buttons */}
+        {(streamSuggestions.length > 0 || suggestions.length > 0) && !isStreaming && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex gap-3 pl-10"
+          >
+            <div className="flex flex-wrap gap-2">
+              {(streamSuggestions.length > 0 ? streamSuggestions : suggestions).map((option) => (
+                <button
+                  key={option}
+                  onClick={() => handleSendText(option)}
+                  className="rounded-full border border-primary/20 bg-primary/10 hover:bg-primary/20 px-3 py-1.5 text-xs font-medium text-primary transition-colors"
+                >
+                  {option}
+                </button>
+              ))}
             </div>
           </motion.div>
         )}

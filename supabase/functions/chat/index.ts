@@ -248,6 +248,22 @@ function parseSSELines(chunk: string, buffer: string): { lines: string[]; remain
   return { lines: parts, remaining };
 }
 
+/** Extract suggestion markers from text, returning cleaned text and parsed options.
+ *  Handles both {{suggest: [...]}} and {"suggest": [...]} formats since the model
+ *  may use either. */
+function extractSuggestions(text: string): { cleaned: string; options: string[] | null } {
+  // Match {{suggest: [...]}} or {"suggest": [...]}
+  const match = text.match(/\{?\{["']?suggest["']?:\s*(\[.*?\])\}?\}/);
+  if (!match) return { cleaned: text, options: null };
+  try {
+    const options = JSON.parse(match[1]);
+    if (Array.isArray(options) && options.every((o: unknown) => typeof o === "string")) {
+      return { cleaned: text.replace(match[0], "").trimEnd(), options };
+    }
+  } catch { /* invalid JSON — ignore */ }
+  return { cleaned: text, options: null };
+}
+
 /** Call Claude API (non-streaming) to get a follow-up response after tool use. */
 async function callClaude(
   apiKey: string,
@@ -363,6 +379,44 @@ Deno.serve(async (req) => {
       .eq("user_id", user.id)
       .order("sort_order");
 
+    // ── Load skill evaluation context ─────────────────────────────────
+
+    const [catResult, skillResult, userSkillResult] = await Promise.all([
+      adminClient.from("skill_categories").select("id, name").order("sort_order"),
+      adminClient.from("skills").select("id, category_id, name").order("sort_order"),
+      adminClient.from("user_skills").select("skill_id, status, coverage_note, section_title, fulfilled").eq("user_id", user.id),
+    ]);
+
+    let skillsContext = "";
+    if (catResult.data && skillResult.data && userSkillResult.data) {
+      const userSkillMap = new Map(
+        userSkillResult.data.map((us: { skill_id: string; status: string; coverage_note: string | null; section_title: string | null; fulfilled: boolean }) => [us.skill_id, us])
+      );
+
+      const gaps: string[] = [];
+      for (const cat of catResult.data) {
+        const catSkills = skillResult.data.filter((s: { category_id: string }) => s.category_id === cat.id);
+        const entries: string[] = [];
+        for (const skill of catSkills) {
+          const us = userSkillMap.get(skill.id) as { status: string; coverage_note: string | null; section_title: string | null; fulfilled: boolean } | undefined;
+          if (!us || us.fulfilled) continue;
+          if (us.status === "missing" || us.status === "partial") {
+            let line = `- ${skill.name}: ${us.status}`;
+            if (us.coverage_note) line += ` — ${us.coverage_note}`;
+            if (us.section_title) line += ` (in "${us.section_title}")`;
+            entries.push(line);
+          }
+        }
+        if (entries.length > 0) {
+          gaps.push(`**${cat.name}**\n${entries.join("\n")}`);
+        }
+      }
+
+      if (gaps.length > 0) {
+        skillsContext = "\n\nSkill gaps identified in this playbook:\n" + gaps.join("\n\n");
+      }
+    }
+
     let playbookContext = "";
     if (allSections && allSections.length > 0) {
       playbookContext =
@@ -396,6 +450,7 @@ Communication style:
 - Before making any edit, ask ONE clarifying question to make sure you understand what the user wants. Only ask one question at a time, never multiple.
 - Do NOT jump straight to editing. Confirm the intent first, then make the change.
 - If the user's request is already very specific and unambiguous, you may skip the clarifying question and proceed.
+- When asking a clarifying question, include 2-4 short suggested answers as a JSON array on the last line in this exact format: {{suggest: ["Option A", "Option B"]}}. Never include this format when you are NOT asking a question.
 
 Guidelines:
 - Use edit_section when refining or replacing existing content — before_text must match exactly
@@ -404,9 +459,10 @@ Guidelines:
 - Format all playbook content in clean Markdown: ## headings, bullet points, **bold**, etc.
 - If the user just asks a question, respond normally without using tools
 - When referencing playbook sections, mention them by their exact title so the user can navigate to them easily.
+- When suggesting improvements, prioritize addressing skill gaps listed below. Reference specific gaps when relevant.
 
 ${sectionContext?.sectionTitle ? `The user is currently viewing: "${sectionContext.sectionTitle}" (ID: ${sectionContext.sectionId})` : "The user is on the dashboard."}
-${playbookContext}`;
+${playbookContext}${skillsContext}`;
 
     // ── Load conversation history ───────────────────────────────────
 
@@ -560,12 +616,20 @@ ${playbookContext}`;
                 const followUp = await callClaude(ANTHROPIC_API_KEY, systemPrompt, followUpMessages);
 
                 if (followUp.text) {
-                  fullResponse += followUp.text;
+                  const { cleaned, options } = extractSuggestions(followUp.text);
+                  fullResponse += cleaned;
                   controller.enqueue(
                     encoder.encode(
-                      `data: ${JSON.stringify({ type: "text", text: followUp.text })}\n\n`
+                      `data: ${JSON.stringify({ type: "text", text: cleaned })}\n\n`
                     )
                   );
+                  if (options) {
+                    controller.enqueue(
+                      encoder.encode(
+                        `data: ${JSON.stringify({ type: "suggestions", options })}\n\n`
+                      )
+                    );
+                  }
                 }
               } catch (e) {
                 console.error("Follow-up Claude call failed:", e);
@@ -574,6 +638,18 @@ ${playbookContext}`;
 
             // Message complete
             else if (parsed.type === "message_stop") {
+              // Extract suggestions before persisting so the marker never hits the DB
+              const { cleaned, options } = extractSuggestions(fullResponse);
+              fullResponse = cleaned;
+
+              if (options) {
+                controller.enqueue(
+                  encoder.encode(
+                    `data: ${JSON.stringify({ type: "suggestions", options })}\n\n`
+                  )
+                );
+              }
+
               // Persist the text portions of the response before closing the stream
               if (fullResponse.trim()) {
                 await supabase

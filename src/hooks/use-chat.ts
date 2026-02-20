@@ -40,12 +40,14 @@ type StreamOptions = {
 type StreamResult = {
   content: string;
   edits: StreamedEdit[];
+  suggestions: string[];
 };
 
 export function useChatStream() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [stagedEdits, setStagedEdits] = useState<StreamedEdit[]>([]);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isToolRunning, setIsToolRunning] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const queryClient = useQueryClient();
@@ -55,6 +57,7 @@ export function useChatStream() {
       setIsStreaming(true);
       setStreamingContent("");
       setStagedEdits([]);
+      setSuggestions([]);
       setIsToolRunning(false);
 
       const controller = new AbortController();
@@ -103,6 +106,7 @@ export function useChatStream() {
         const decoder = new TextDecoder();
         let fullContent = "";
         const edits: StreamedEdit[] = [];
+        let collectedSuggestions: string[] = [];
         let lineBuffer = "";
 
         while (true) {
@@ -125,7 +129,14 @@ export function useChatStream() {
 
                 if (parsed.type === "text") {
                   fullContent += parsed.text;
-                  setStreamingContent(fullContent);
+                  // Strip suggestion markers so they never flash in the UI.
+                  // Handles both {{suggest: [...]}} and {"suggest": [...]} formats,
+                  // including partial markers still being streamed token-by-token.
+                  const display = fullContent.replace(/\n*\{?\{["']?suggest[\s\S]*$/, "");
+                  setStreamingContent(display);
+                } else if (parsed.type === "suggestions") {
+                  collectedSuggestions = parsed.options;
+                  setSuggestions(parsed.options);
                 } else if (parsed.type === "tool_start") {
                   setIsToolRunning(true);
                 } else if (parsed.type === "staged_edit") {
@@ -152,7 +163,9 @@ export function useChatStream() {
           queryClient.invalidateQueries({ queryKey: ["staged-edits"] });
         }
 
-        return { content: fullContent, edits };
+        // Strip any suggest marker that wasn't caught by the backend SSE event
+        const cleanContent = fullContent.replace(/\n*\{?\{["']?suggest["']?:\s*\[.*?\]\}?\}\s*$/, "");
+        return { content: cleanContent, edits, suggestions: collectedSuggestions };
       } finally {
         // Only clear streaming flag and tool state — keep streamingContent
         // visible until the caller has pushed the result to localMessages
@@ -168,11 +181,12 @@ export function useChatStream() {
   const clearStream = useCallback(() => {
     setStreamingContent("");
     setStagedEdits([]);
+    setSuggestions([]);
   }, []);
 
   const abort = useCallback(() => {
     abortRef.current?.abort();
   }, []);
 
-  return { sendMessage, isStreaming, streamingContent, stagedEdits, isToolRunning, abort, clearStream };
+  return { sendMessage, isStreaming, streamingContent, stagedEdits, suggestions, isToolRunning, abort, clearStream };
 }

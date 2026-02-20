@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { DiffView } from "./DiffView";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { Markdown } from "./Markdown";
-import { fixGfmTables, computeDiffSegments, containsTable } from "@/lib/compute-diff";
+import { fixGfmTables, containsTable } from "@/lib/compute-diff";
 
 const providerLabels: Record<string, string> = {
   confluence: "Confluence",
@@ -36,37 +36,8 @@ const InlineChangesView = ({ before, after }: { before?: string | null; after: s
     );
   }
 
-  // For tables, fall back to the structured DiffView (tables can't do inline word highlights)
-  if (containsTable(before) || containsTable(after)) {
-    return <DiffView before={before} after={after} fullSize />;
-  }
-
-  // Inline word-level highlights
-  const segments = computeDiffSegments(before, after);
-
-  return (
-    <div className="rounded-lg border border-border bg-background p-4 max-h-[60vh] overflow-y-auto">
-      <span className="text-sm leading-relaxed text-secondary-foreground whitespace-pre-wrap">
-        {segments.map((seg, i) => {
-          if (seg.type === "added") {
-            return (
-              <span key={i} className="bg-success/30 text-foreground font-medium rounded-sm">
-                {seg.text}
-              </span>
-            );
-          }
-          if (seg.type === "removed") {
-            return (
-              <span key={i} className="bg-destructive/15 text-destructive line-through rounded-sm">
-                {seg.text}
-              </span>
-            );
-          }
-          return <span key={i}>{seg.text}</span>;
-        })}
-      </span>
-    </div>
-  );
+  // Render both versions as markdown
+  return <DiffView before={before} after={after} fullSize />;
 };
 
 export const StagingPanel = () => {

@@ -113,7 +113,7 @@ export const OnboardingFlow = ({ onComplete }: { onComplete: () => void }) => {
       setImportPhase("extracting");
       setStep("analyzing");
       notionImport.mutate(undefined, {
-        onSuccess: () => setStep("done"),
+        onSuccess: () => onComplete(),
         onError: (err) => {
           setImportError(err.message);
           setStep("source");
@@ -166,7 +166,7 @@ export const OnboardingFlow = ({ onComplete }: { onComplete: () => void }) => {
         const text = await file.text();
         await startImport.mutateAsync({ provider: "pdf", content: text });
       }
-      setStep("done");
+      onComplete();
     } catch (err) {
       setImportError((err as Error).message);
       setStep("source");
@@ -259,7 +259,7 @@ export const OnboardingFlow = ({ onComplete }: { onComplete: () => void }) => {
     setImportPhase("extracting");
     setStep("analyzing");
     confluenceImport.mutate([...selectedPageIds], {
-      onSuccess: () => setStep("done"),
+      onSuccess: () => onComplete(),
       onError: (err) => {
         setImportError(err.message);
         setStep("pick-pages");

@@ -46,6 +46,7 @@ export async function analyzeSections(
     body: JSON.stringify({
       model: "claude-opus-4-6",
       max_tokens: 16384,
+      temperature: 0,
       system: `You are a sales playbook analyzer. Given the full content of a sales playbook, you must:
 
 1. For EVERY skill, determine the section where it is addressed or where it SHOULD be addressed.

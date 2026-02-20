@@ -5,6 +5,7 @@ export type Profile = {
   full_name: string;
   avatar_url: string | null;
   role: string;
+  status: 'active' | 'waitlisted';
   created_at: string;
 };
 

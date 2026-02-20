@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useHealthScore } from "@/hooks/use-health-score";
-import { XCircle, AlertTriangle, Clock, CheckCircle2, Loader2 } from "lucide-react";
+import { XCircle, AlertTriangle, Clock, CheckCircle2, Loader2, Info } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 export const HealthScore = ({ activeFilter, onFilterChange }: { activeFilter: string | null; onFilterChange: (filter: string) => void }) => {
   const { data: health, isLoading, isRefetching } = useHealthScore();
@@ -26,6 +27,15 @@ export const HealthScore = ({ activeFilter, onFilterChange }: { activeFilter: st
           <span className="text-sm font-semibold text-foreground">Playbook Health</span>
           <span className={`text-xl font-bold font-mono ${healthColor}`}>{health.score}</span>
           <span className="text-xs text-muted-foreground">/ 100</span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-xs text-xs leading-relaxed">
+              <p>Score = (covered + partial × 0.5) / total skills × 100</p>
+              <p className="mt-1 text-muted-foreground">Fully covered skills count 100%, partially covered count 50%. Skills not updated in 90+ days are flagged as outdated.</p>
+            </TooltipContent>
+          </Tooltip>
           {isRefetching && <Loader2 className="w-3 h-3 text-muted-foreground animate-spin" />}
         </div>
 

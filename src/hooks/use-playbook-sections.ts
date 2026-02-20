@@ -60,7 +60,7 @@ export function useResetPlaybook() {
       // Reset all user_skills to missing (RLS scopes to current user)
       const { error: skillError } = await supabase
         .from("user_skills")
-        .update({ status: "missing", last_updated: null, section_title: null, coverage_note: null })
+        .update({ status: "missing", last_updated: null, section_title: null, coverage_note: null, fulfilled: false })
         .neq("skill_id", "");
       if (skillError) throw skillError;
     },

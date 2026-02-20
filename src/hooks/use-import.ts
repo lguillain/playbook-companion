@@ -52,11 +52,9 @@ export function useStartImport(onPhaseChange?: (phase: "extracting" | "analyzing
       });
       if (error) throw error;
 
-      // Sections are now in the DB — make them visible immediately
-      await queryClient.invalidateQueries({ queryKey: ["playbook-sections"] });
-      await queryClient.invalidateQueries({ queryKey: ["imports"] });
-
       // Step 2: Analyze — skill mapping on saved sections
+      // (sections + skills are invalidated together in onSuccess so the
+      // OnboardingFlow stays visible until analysis finishes)
       onPhaseChange?.("analyzing");
       const { error: analyzeError } = await supabase.functions.invoke("analyze");
       if (analyzeError) throw analyzeError;

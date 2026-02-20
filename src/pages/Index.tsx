@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 import { AppHeader } from "@/components/AppHeader";
 import { HealthScore } from "@/components/HealthScore";
@@ -13,8 +13,14 @@ import { usePlaybookSections } from "@/hooks/use-playbook-sections";
 const Index = () => {
   const { data: sections, isLoading: sectionsLoading } = usePlaybookSections();
   const hasPlaybook = (sections?.length ?? 0) > 0;
-  const [dismissed, setDismissed] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
+
+  // Latch: show onboarding when no playbook exists; once visible it stays
+  // until the full import+analyze flow completes and calls onComplete.
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  useEffect(() => {
+    if (!sectionsLoading && !hasPlaybook) setShowOnboarding(true);
+  }, [sectionsLoading, hasPlaybook]);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   const [skillFilter, setSkillFilter] = useState<{ skillId: string; skillName: string } | null>(null);
@@ -33,8 +39,8 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <AnimatePresence>
-        {!sectionsLoading && !hasPlaybook && !dismissed && (
-          <OnboardingFlow onComplete={() => { setDismissed(true); setActiveTab("dashboard"); }} />
+        {showOnboarding && (
+          <OnboardingFlow onComplete={() => { setShowOnboarding(false); setActiveTab("dashboard"); }} />
         )}
       </AnimatePresence>
 
