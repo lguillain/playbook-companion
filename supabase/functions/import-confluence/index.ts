@@ -1,9 +1,11 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { env } from "../_shared/env.ts";
-import { splitIntoSections } from "../_shared/split-sections.ts";
+import { splitIntoSections, splitJsonIntoSections } from "../_shared/split-sections.ts";
 import { analyzeSections, backfillCoverageNotes } from "../_shared/analyze-sections.ts";
 import { scopedDeleteByProvider } from "../_shared/scoped-delete.ts";
+import { confluenceToJson } from "../_shared/confluence-to-json.ts";
+import { tiptapToMarkdown, type TipTapDoc } from "../_shared/tiptap-markdown.ts";
 
 const ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY");
 const CONFLUENCE_CLIENT_ID = env("CONFLUENCE_CLIENT_ID");
@@ -77,6 +79,11 @@ function stripTags(html: string): string {
 /** Convert Confluence storage-format HTML to markdown. */
 function htmlToMarkdown(html: string): string {
   let text = html;
+
+  // Strip Confluence tracked-change tags and inline comment markers (keep inner text)
+  text = text.replace(/<\/?ins[^>]*>/gi, "");
+  text = text.replace(/<\/?del[^>]*>/gi, "");
+  text = text.replace(/<\/?ac:inline-comment-marker[^>]*>/gi, "");
 
   // Convert headings
   text = text.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, "# $1\n\n");
@@ -152,6 +159,21 @@ function htmlToMarkdown(html: string): string {
   text = text.replace(/&quot;/g, '"');
   text = text.replace(/&#39;/g, "'");
   text = text.replace(/&nbsp;/g, " ");
+  text = text.replace(/&rsquo;/g, "\u2019");
+  text = text.replace(/&lsquo;/g, "\u2018");
+  text = text.replace(/&rdquo;/g, "\u201D");
+  text = text.replace(/&ldquo;/g, "\u201C");
+  text = text.replace(/&mdash;/g, "\u2014");
+  text = text.replace(/&ndash;/g, "\u2013");
+  text = text.replace(/&rarr;/g, "\u2192");
+  text = text.replace(/&larr;/g, "\u2190");
+  text = text.replace(/&hellip;/g, "\u2026");
+  text = text.replace(/&bull;/g, "\u2022");
+  text = text.replace(/&trade;/g, "\u2122");
+  text = text.replace(/&copy;/g, "\u00A9");
+  text = text.replace(/&reg;/g, "\u00AE");
+  text = text.replace(/&#x([0-9a-fA-F]+);/g, (_: string, hex: string) => String.fromCodePoint(parseInt(hex, 16)));
+  text = text.replace(/&#(\d+);/g, (_: string, dec: string) => String.fromCodePoint(parseInt(dec, 10)));
 
   // Clean up extra whitespace
   text = text.replace(/\n{3,}/g, "\n\n");
@@ -417,10 +439,11 @@ Deno.serve(async (req) => {
     // Sort pages into tree order (parent → children, respecting position)
     const orderedPages = sortPagesAsTree(rawPages);
 
-    // Convert each page to markdown and split by headings into sections
+    // Convert each page's HTML to JSON and split by headings into sections
     type ParsedSection = {
       title: string;
       content: string;
+      contentJson: TipTapDoc;
       sourcePageId: string;
       lastModified: string | null;
       depth: number;
@@ -428,29 +451,31 @@ Deno.serve(async (req) => {
     const allSections: ParsedSection[] = [];
 
     for (const page of orderedPages) {
-      const markdown = page.html.trim() ? htmlToMarkdown(page.html) : "";
-      if (!markdown) continue;
+      if (!page.html.trim()) continue;
 
-      const headingSections = splitIntoSections(markdown, page.title);
+      // Convert Confluence HTML → TipTap JSON directly
+      const pageJson = confluenceToJson(page.html);
+      const jsonSections = splitJsonIntoSections(pageJson, page.title);
 
-      if (headingSections.length === 1 && headingSections[0].title === page.title) {
-        // Page had no internal headings — keep page title as-is
+      if (jsonSections.length === 0) continue;
+
+      if (jsonSections.length === 1 && jsonSections[0].title === page.title) {
         allSections.push({
           title: page.title,
-          content: headingSections[0].content,
+          content: jsonSections[0].content,
+          contentJson: jsonSections[0].contentJson,
           sourcePageId: page.id,
           lastModified: page.lastModified,
           depth: page.depth,
         });
       } else {
-        // First section uses the page title and page depth (acts as parent node)
-        // Subsequent heading sections nest one level deeper
-        for (let j = 0; j < headingSections.length; j++) {
-          const sec = headingSections[j];
+        for (let j = 0; j < jsonSections.length; j++) {
+          const sec = jsonSections[j];
           const isFirst = j === 0;
           allSections.push({
             title: isFirst ? page.title : sec.title,
             content: sec.content,
+            contentJson: sec.contentJson,
             sourcePageId: page.id,
             lastModified: page.lastModified,
             depth: isFirst ? page.depth : page.depth + 1,
@@ -498,6 +523,7 @@ Deno.serve(async (req) => {
           user_id: user.id,
           title: sec.title,
           content: sec.content,
+          content_json: sec.contentJson,
           sort_order: sortOffset + i + 1,
           last_updated: sec.lastModified ?? fallbackDate,
           source_page_id: sec.sourcePageId,
@@ -519,14 +545,17 @@ Deno.serve(async (req) => {
     // Fetch ALL user sections (across all providers) for skill analysis
     const { data: allUserSections } = await adminClient
       .from("playbook_sections")
-      .select("id, title, content, last_updated")
+      .select("id, title, content, content_json, last_updated")
       .eq("user_id", user.id)
       .order("sort_order");
 
     const sectionsForAnalysis = (allUserSections ?? []).map((s: any) => ({
       id: s.id,
       title: s.title,
-      content: s.content,
+      // Prefer JSON → markdown for analysis (higher fidelity), fall back to stored markdown
+      content: s.content_json
+        ? tiptapToMarkdown(s.content_json as TipTapDoc).trim()
+        : s.content,
       lastModified: s.last_updated,
     }));
 

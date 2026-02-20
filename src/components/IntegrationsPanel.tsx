@@ -255,7 +255,7 @@ export const IntegrationsPanel = () => {
               <p className="text-sm text-muted-foreground">
                 {importPhase === "extracting"
                   ? "Reading and converting your document to structured content…"
-                  : "Mapping sections to skills framework…"}
+                  : "Mapping sections to knowledge areas…"}
               </p>
               <div className="mt-6 space-y-2">
                 <div className="flex items-center gap-2 justify-center text-xs text-muted-foreground">

@@ -9,8 +9,8 @@ import { PROVIDER_LABELS } from "@/lib/types";
 import { FileText, Clock, ChevronRight, CheckCircle2, AlertTriangle, XCircle, Pencil, X, Save, Loader2, Filter, ChevronsUpDown, Check, PanelRightClose, PanelRightOpen, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { ChatEditor } from "./ChatEditor";
-import { Markdown } from "./Markdown";
-import { MarkdownEditor } from "./MarkdownEditor";
+import { TipTapViewer } from "./TipTapViewer";
+import { TipTapEditor } from "./TipTapEditor";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
@@ -276,6 +276,8 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange, initialSectio
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [editDraft, setEditDraft] = useState("");
+  const [editDraftJson, setEditDraftJson] = useState<Record<string, unknown> | null>(null);
+  const editBaseline = useRef<string>("");
   const [savedFlash, setSavedFlash] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilterKey | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
@@ -508,33 +510,40 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange, initialSectio
 
   const startEditing = () => {
     setEditDraft(current.content);
+    setEditDraftJson(current.contentJson);
     setEditing(true);
   };
 
   const cancelEditing = () => {
     setEditing(false);
     setEditDraft("");
+    setEditDraftJson(null);
   };
 
   const saveEdit = async () => {
-    if (editDraft === current.content) {
+    // Compare against the TipTap-normalized baseline (not raw original)
+    // to avoid false positives from character normalization (→, —, "", etc.)
+    const baseline = editBaseline.current || current.content;
+    if (editDraft === baseline) {
       setEditing(false);
       return;
     }
 
     try {
-      // Directly update the section content
-      await updateSection.mutateAsync({ id: current.id, content: editDraft });
-      // Record as auto-approved staged edit (full content for review)
+      // Directly update the section content (both markdown + JSON)
+      await updateSection.mutateAsync({ id: current.id, content: editDraft, contentJson: editDraftJson });
+      // Record as auto-approved staged edit — use normalized baseline as "before"
+      // so both before/after have been through the same serializer (no phantom diffs)
       await createEdit.mutateAsync({
         sectionId: current.id,
-        before: current.content,
+        before: baseline,
         after: editDraft,
         source: "manual",
         autoApprove: true,
       });
       setEditing(false);
       setEditDraft("");
+      setEditDraftJson(null);
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 2000);
     } catch {
@@ -777,9 +786,14 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange, initialSectio
             </div>
 
             {editing ? (
-              <MarkdownEditor markdown={editDraft} onChange={setEditDraft} />
+              <TipTapEditor
+                markdown={editDraft}
+                onChange={setEditDraft}
+                onJsonChange={setEditDraftJson}
+                onReady={(normalized) => { editBaseline.current = normalized; }}
+              />
             ) : (
-              <Markdown>{current.content}</Markdown>
+              <TipTapViewer content={current.content} contentJson={current.contentJson} />
             )}
           </div>
         </div>

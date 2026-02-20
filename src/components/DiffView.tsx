@@ -1,11 +1,11 @@
-import { useMemo } from "react";
-import { Markdown, DiffMarkdown } from "./Markdown";
+import { useMemo, useState } from "react";
+import { Markdown } from "./Markdown";
 import { TableDiffView } from "./TableDiffView";
 import {
-  containsTable,
   parsePipeTable,
   fixGfmTables,
-  computeDiffSegments,
+  computeBlockDiff,
+  type BlockDiff,
 } from "@/lib/compute-diff";
 
 type DiffViewProps = {
@@ -16,20 +16,13 @@ type DiffViewProps = {
 };
 
 export const DiffView = ({ before, after, fullSize = false }: DiffViewProps) => {
-  const labelClass = fullSize ? "text-[10px]" : "text-[9px]";
-  const padClass = fullSize ? "p-2" : "p-1.5";
   const maxH = fullSize ? "max-h-[60vh] overflow-y-auto" : "max-h-[200px] overflow-y-auto";
 
   // New content — no before
   if (!before) {
     return (
-      <div>
-        <span className={`${labelClass} font-overline text-muted-foreground uppercase tracking-wider`}>
-          New content
-        </span>
-        <div className={`mt-1 rounded bg-success/5 border border-success/10 ${padClass} text-foreground leading-relaxed min-h-[40px] ${maxH}`}>
-          <Markdown>{fixGfmTables(after)}</Markdown>
-        </div>
+      <div className={`text-sm leading-relaxed diff-added-text ${maxH}`}>
+        <Markdown>{fixGfmTables(after)}</Markdown>
       </div>
     );
   }
@@ -37,109 +30,113 @@ export const DiffView = ({ before, after, fullSize = false }: DiffViewProps) => 
   // No actual change
   if (before === after) {
     return (
-      <div>
-        <span className={`${labelClass} font-overline text-muted-foreground uppercase tracking-wider`}>
-          No changes
-        </span>
-        <div className={`mt-1 rounded bg-muted/30 border border-border ${padClass} text-foreground leading-relaxed min-h-[40px] ${maxH}`}>
-          <Markdown>{fixGfmTables(after)}</Markdown>
-        </div>
+      <div className={`text-sm leading-relaxed text-muted-foreground ${maxH}`}>
+        <Markdown>{fixGfmTables(after)}</Markdown>
       </div>
     );
   }
 
-  const hasTable = containsTable(before) || containsTable(after);
+  // Try cell-level table diff when both sides parse as pipe tables
+  const beforeTable = parsePipeTable(before);
+  const afterTable = parsePipeTable(after);
 
-  if (hasTable) {
-    return <TableDiff before={before} after={after} labelClass={labelClass} padClass={padClass} maxH={maxH} />;
-  }
-
-  return <TextDiff before={before} after={after} labelClass={labelClass} padClass={padClass} maxH={maxH} />;
-};
-
-// ── Table diff (cell-level structured diff) ──────────────────────────
-
-type InnerDiffProps = {
-  before: string;
-  after: string;
-  labelClass: string;
-  padClass: string;
-  maxH: string;
-};
-
-const TableDiff = ({ before, after, labelClass, padClass, maxH }: InnerDiffProps) => {
-  const beforeTable = useMemo(() => parsePipeTable(before), [before]);
-  const afterTable = useMemo(() => parsePipeTable(after), [after]);
-
-  // Both sides parsed as tables → cell-level diff
   if (beforeTable && afterTable) {
     return (
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <span className={`${labelClass} font-overline text-muted-foreground uppercase tracking-wider`}>
-            Changes
-          </span>
-          <span className={`${labelClass} text-muted-foreground/60`}>
-            <span className="text-destructive">red</span> = removed, <span className="text-success">green</span> = added
-          </span>
-        </div>
-        <div className={`${maxH}`}>
-          <TableDiffView before={beforeTable} after={afterTable} />
-        </div>
+      <div className={maxH}>
+        <TableDiffView before={beforeTable} after={afterTable} />
       </div>
     );
   }
 
-  // Fallback: render fixed GFM through Markdown in stacked layout
+  return <InlineDiffView before={before} after={after} maxH={maxH} />;
+};
+
+// ── Inline suggestion-style diff view ────────────────────────────────
+
+const InlineDiffView = ({ before, after, maxH }: { before: string; after: string; maxH: string }) => {
+  const diffs = useMemo(() => computeBlockDiff(before, after), [before, after]);
+
   return (
-    <div className="space-y-2">
-      <div>
-        <span className={`${labelClass} font-overline text-muted-foreground uppercase tracking-wider`}>
-          Current version
-        </span>
-        <div className={`mt-1 rounded bg-destructive/5 border border-destructive/10 ${padClass} text-muted-foreground leading-relaxed min-h-[40px] ${maxH}`}>
-          <Markdown>{fixGfmTables(before)}</Markdown>
-        </div>
-      </div>
-      <div>
-        <span className={`${labelClass} font-overline text-muted-foreground uppercase tracking-wider`}>
-          Proposed version
-        </span>
-        <div className={`mt-1 rounded bg-success/5 border border-success/10 ${padClass} text-foreground leading-relaxed min-h-[40px] ${maxH}`}>
-          <Markdown>{fixGfmTables(after)}</Markdown>
-        </div>
-      </div>
+    <div className={`text-sm leading-relaxed space-y-2 ${maxH}`}>
+      {diffs.map((d, i) => (
+        <DiffEntry key={i} entry={d} />
+      ))}
     </div>
   );
 };
 
-// ── Inline word-level diff (for non-table content) ──────────────────
+// ── Per-entry renderer ───────────────────────────────────────────────
 
-const TextDiff = ({ before, after, labelClass, maxH }: InnerDiffProps) => {
-  const diffMarkdown = useMemo(() => {
-    const segments = computeDiffSegments(before, after);
-    return segments
-      .map((seg) => {
-        if (seg.type === "added") return `<ins>${seg.text}</ins>`;
-        if (seg.type === "removed") return `<del>${seg.text}</del>`;
-        return seg.text;
-      })
-      .join("");
-  }, [before, after]);
+const DiffEntry = ({ entry }: { entry: BlockDiff }) => {
+  switch (entry.type) {
+    case "unchanged":
+      return <UnchangedGroup blocks={entry.blocks} />;
+    case "added":
+      return (
+        <div className="diff-added-text">
+          <Markdown>{fixGfmTables(entry.block)}</Markdown>
+        </div>
+      );
+    case "removed":
+      return (
+        <div className="diff-removed-text">
+          <Markdown>{fixGfmTables(entry.block)}</Markdown>
+        </div>
+      );
+    case "modified":
+      return (
+        <div>
+          <div className="diff-removed-text">
+            <Markdown>{fixGfmTables(entry.before)}</Markdown>
+          </div>
+          <div className="diff-added-text">
+            <Markdown>{fixGfmTables(entry.after)}</Markdown>
+          </div>
+        </div>
+      );
+  }
+};
+
+// ── Unchanged group with collapsing ──────────────────────────────────
+
+const COLLAPSE_BLOCK_THRESHOLD = 3;
+const COLLAPSE_LINE_THRESHOLD = 10;
+
+const UnchangedGroup = ({ blocks }: { blocks: string[] }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  const totalLines = blocks.reduce((sum, b) => sum + b.split("\n").length, 0);
+  const shouldCollapse =
+    blocks.length > COLLAPSE_BLOCK_THRESHOLD || totalLines > COLLAPSE_LINE_THRESHOLD;
+
+  if (!shouldCollapse || expanded) {
+    return (
+      <div className="text-muted-foreground">
+        {blocks.map((b, i) => (
+          <Markdown key={i}>{fixGfmTables(b)}</Markdown>
+        ))}
+        {expanded && (
+          <button
+            onClick={() => setExpanded(false)}
+            className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+          >
+            Collapse
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <div className="flex items-center gap-2 mb-1">
-        <span className={`${labelClass} font-overline text-muted-foreground uppercase tracking-wider`}>
-          Changes
-        </span>
-        <span className={`${labelClass} text-muted-foreground/60`}>
-          <span className="text-destructive">red</span> = removed, <span className="text-success">green</span> = added
-        </span>
-      </div>
-      <div className={`overflow-x-auto rounded-lg border border-border p-3 ${maxH}`}>
-        <DiffMarkdown>{fixGfmTables(diffMarkdown)}</DiffMarkdown>
-      </div>
+    <div className="text-muted-foreground">
+      <Markdown>{fixGfmTables(blocks[0])}</Markdown>
+      <button
+        onClick={() => setExpanded(true)}
+        className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground transition-colors py-0.5"
+      >
+        &hellip;
+      </button>
+      <Markdown>{fixGfmTables(blocks[blocks.length - 1])}</Markdown>
     </div>
   );
 };

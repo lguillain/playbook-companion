@@ -39,6 +39,7 @@ export type PlaybookSectionRow = {
   user_id: string;
   title: string;
   content: string;
+  content_json: Record<string, unknown> | null;
   sort_order: number;
   depth: number;
   last_updated: string;
@@ -57,6 +58,7 @@ export type StagedEditRow = {
   section_id: string;
   before_text: string;
   after_text: string;
+  after_json: Record<string, unknown> | null;
   status: "pending" | "approved" | "rejected";
   source: "chat" | "manual" | null;
   message_id: string | null;
@@ -138,7 +140,10 @@ export type SectionSkillLink = {
 export type PlaybookSection = {
   id: string;
   title: string;
+  /** Markdown content (fallback / diff display) */
   content: string;
+  /** TipTap JSON content (source of truth when present) */
+  contentJson: Record<string, unknown> | null;
   depth: number;
   lastUpdated: string;
   provider: string;

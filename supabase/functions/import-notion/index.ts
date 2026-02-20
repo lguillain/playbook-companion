@@ -1,9 +1,11 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { env } from "../_shared/env.ts";
-import { splitIntoSections } from "../_shared/split-sections.ts";
+import { splitIntoSections, splitJsonIntoSections } from "../_shared/split-sections.ts";
 import { analyzeSections, backfillCoverageNotes } from "../_shared/analyze-sections.ts";
 import { scopedDeleteByProvider } from "../_shared/scoped-delete.ts";
+import { notionToJson } from "../_shared/notion-to-json.ts";
+import { tiptapToMarkdown, type TipTapDoc } from "../_shared/tiptap-markdown.ts";
 
 const ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY");
 const NOTION_API_VERSION = "2022-06-28";
@@ -117,6 +119,7 @@ type ParsedPage = {
   title: string;
   parentId: string | null;
   markdown: string;
+  contentJson: TipTapDoc;
   lastEdited: string | null;
 };
 
@@ -160,8 +163,10 @@ async function fetchNotionPages(
     try {
       const blocks = await fetchAllBlocks(page.id, token);
       const markdown = blocksToMarkdown(blocks);
+      // Convert blocks directly to TipTap JSON (no markdown intermediate)
+      const contentJson = notionToJson(blocks);
       if (markdown.trim()) {
-        pages.push({ id: page.id, title, parentId, markdown, lastEdited });
+        pages.push({ id: page.id, title, parentId, markdown, contentJson, lastEdited });
       }
     } catch (err) {
       console.error(`Failed to fetch blocks for page ${page.id}:`, err);
@@ -295,10 +300,11 @@ Deno.serve(async (req) => {
     // Sort pages into tree order (parent → children)
     const orderedPages = sortPagesAsTree(parsedPages);
 
-    // Split each page's markdown by headings into finer-grained sections
+    // Split each page's JSON by headings into finer-grained sections
     type ParsedSection = {
       title: string;
       content: string;
+      contentJson: TipTapDoc;
       sourcePageId: string;
       lastEdited: string | null;
       depth: number;
@@ -306,26 +312,28 @@ Deno.serve(async (req) => {
     const allSections: ParsedSection[] = [];
 
     for (const page of orderedPages) {
-      const headingSections = splitIntoSections(page.markdown, page.title);
+      // Use JSON-aware splitting (preserves structure)
+      const jsonSections = splitJsonIntoSections(page.contentJson, page.title);
 
-      if (headingSections.length === 1 && headingSections[0].title === page.title) {
-        // Page had no internal headings — keep page title as-is
+      if (jsonSections.length === 0) continue;
+
+      if (jsonSections.length === 1 && jsonSections[0].title === page.title) {
         allSections.push({
           title: page.title,
-          content: headingSections[0].content,
+          content: jsonSections[0].content,
+          contentJson: jsonSections[0].contentJson,
           sourcePageId: page.id,
           lastEdited: page.lastEdited,
           depth: page.depth,
         });
       } else {
-        // First section uses the page title and page depth (acts as parent node)
-        // Subsequent heading sections nest one level deeper
-        for (let j = 0; j < headingSections.length; j++) {
-          const sec = headingSections[j];
+        for (let j = 0; j < jsonSections.length; j++) {
+          const sec = jsonSections[j];
           const isFirst = j === 0;
           allSections.push({
             title: isFirst ? page.title : sec.title,
             content: sec.content,
+            contentJson: sec.contentJson,
             sourcePageId: page.id,
             lastEdited: page.lastEdited,
             depth: isFirst ? page.depth : page.depth + 1,
@@ -361,6 +369,7 @@ Deno.serve(async (req) => {
           user_id: user.id,
           title: sec.title,
           content: sec.content,
+          content_json: sec.contentJson,
           sort_order: sortOffset + i + 1,
           last_updated: sec.lastEdited ?? fallbackDate,
           source_page_id: sec.sourcePageId,
@@ -382,14 +391,17 @@ Deno.serve(async (req) => {
     // Fetch ALL user sections (across all providers) for skill analysis
     const { data: allUserSections } = await adminClient
       .from("playbook_sections")
-      .select("id, title, content, last_updated")
+      .select("id, title, content, content_json, last_updated")
       .eq("user_id", user.id)
       .order("sort_order");
 
     const sectionsForAnalysis = (allUserSections ?? []).map((s: any) => ({
       id: s.id,
       title: s.title,
-      content: s.content,
+      // Prefer JSON → markdown for analysis (higher fidelity), fall back to stored markdown
+      content: s.content_json
+        ? tiptapToMarkdown(s.content_json as TipTapDoc).trim()
+        : s.content,
       lastModified: s.last_updated,
     }));
 

@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient, SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { env } from "../_shared/env.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { markdownToTiptap, tiptapToMarkdown, type TipTapDoc } from "../_shared/tiptap-markdown.ts";
 
 // ── Tool definitions ──────────────────────────────────────────────────
 
@@ -120,7 +121,7 @@ async function executeTool(
     // Verify section exists and belongs to user
     const { data: section } = await adminClient
       .from("playbook_sections")
-      .select("id, title")
+      .select("id, title, content, content_json")
       .eq("id", sectionId)
       .eq("user_id", userId)
       .single();
@@ -129,12 +130,28 @@ async function executeTool(
       return { ok: false, error: `Section "${sectionId}" not found` };
     }
 
+    // Compute the full after_json: apply the text edit then convert to JSON
+    let afterJson: Record<string, unknown> | null = null;
+    try {
+      const currentContent = (section as Record<string, unknown>).content as string ?? "";
+      let fullAfterMd: string;
+      if (beforeText === "") {
+        fullAfterMd = currentContent + "\n\n" + afterText;
+      } else {
+        fullAfterMd = currentContent.replace(beforeText, afterText);
+      }
+      afterJson = markdownToTiptap(fullAfterMd) as unknown as Record<string, unknown>;
+    } catch {
+      // Non-critical: JSON will be null, text-based flow still works
+    }
+
     const { data: edit, error } = await supabase
       .from("staged_edits")
       .insert({
         section_id: sectionId,
         before_text: beforeText,
         after_text: afterText,
+        after_json: afterJson,
         source: "chat",
         created_by: userId,
         ...(messageId ? { message_id: messageId } : {}),
@@ -202,6 +219,14 @@ async function executeTool(
 
     const sectionId = newSection.id;
 
+    // Compute JSON for the new section content
+    let newAfterJson: Record<string, unknown> | null = null;
+    try {
+      newAfterJson = markdownToTiptap(content) as unknown as Record<string, unknown>;
+    } catch {
+      // Non-critical
+    }
+
     // Create staged edit to populate it
     const { data: edit, error: editError } = await supabase
       .from("staged_edits")
@@ -209,6 +234,7 @@ async function executeTool(
         section_id: sectionId,
         before_text: "",
         after_text: content,
+        after_json: newAfterJson,
         source: "chat",
         created_by: userId,
         ...(messageId ? { message_id: messageId } : {}),
@@ -375,7 +401,7 @@ Deno.serve(async (req) => {
 
     const { data: allSections } = await adminClient
       .from("playbook_sections")
-      .select("id, title, content")
+      .select("id, title, content, content_json")
       .eq("user_id", user.id)
       .order("sort_order");
 
@@ -422,14 +448,17 @@ Deno.serve(async (req) => {
       playbookContext =
         "\n\nPlaybook sections (use these IDs when editing):\n" +
         allSections
-          .map((s: { id: string; title: string; content: string }) => {
+          .map((s: { id: string; title: string; content: string; content_json: Record<string, unknown> | null }) => {
+            // Always use original markdown for Claude context.
+            // JSON→markdown round-trip can alter special chars (smart quotes,
+            // em dashes, arrows), causing phantom diffs in Claude's edits.
+            let body: string = s.content;
             // Full content for the dashboard or the section the user is viewing, summary for others
             const isDashboard = !sectionContext?.sectionId;
             const isCurrent = sectionContext?.sectionId === s.id;
-            const body = isDashboard || isCurrent
-              ? s.content
-              : s.content.slice(0, 800) +
-                (s.content.length > 800 ? "..." : "");
+            if (!isDashboard && !isCurrent) {
+              body = body.slice(0, 800) + (body.length > 800 ? "..." : "");
+            }
             return `### ${s.title}  (ID: ${s.id})\n${body}`;
           })
           .join("\n\n");

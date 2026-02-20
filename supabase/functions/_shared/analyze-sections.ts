@@ -1,5 +1,6 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { getSkillsPromptBlock, ALL_SKILL_IDS, SKILL_CATEGORIES } from "./skills.ts";
+import { tiptapToMarkdown, type TipTapDoc } from "./tiptap-markdown.ts";
 
 type SupabaseAdmin = ReturnType<typeof createClient>;
 

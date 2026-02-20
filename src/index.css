@@ -135,6 +135,148 @@
     background: var(--gradient-health-bad);
   }
 
+  /* ── TipTap editor & viewer styles ────────────────────────────── */
+
+  /* Shared prose styles for both editor and read-only viewer */
+  .tiptap-editor-content,
+  .tiptap-viewer-content {
+    @apply text-sm leading-relaxed;
+  }
+
+  .tiptap-editor-content {
+    @apply w-full min-h-[300px] bg-card p-4 outline-none resize-y;
+  }
+
+  .tiptap-editor-content:focus {
+    @apply ring-2 ring-primary/30;
+  }
+
+  .tiptap-editor-content p.is-editor-empty:first-child::before {
+    @apply text-muted-foreground pointer-events-none float-left h-0;
+    content: attr(data-placeholder);
+  }
+
+  /* Headings */
+  .tiptap-editor-content h1,
+  .tiptap-viewer-content h1 {
+    @apply text-lg text-foreground mt-5 mb-2;
+  }
+  .tiptap-editor-content h2,
+  .tiptap-viewer-content h2 {
+    @apply text-base text-foreground mt-4 mb-2;
+  }
+  .tiptap-editor-content h3,
+  .tiptap-viewer-content h3 {
+    @apply text-sm text-foreground mt-3 mb-1.5;
+  }
+  .tiptap-editor-content h4,
+  .tiptap-viewer-content h4 {
+    @apply text-sm text-foreground mt-2 mb-1;
+  }
+
+  /* Paragraphs */
+  .tiptap-editor-content p,
+  .tiptap-viewer-content p {
+    @apply text-sm text-secondary-foreground leading-relaxed mb-2;
+  }
+
+  /* Lists */
+  .tiptap-editor-content ul,
+  .tiptap-viewer-content ul {
+    @apply list-disc ml-4 mb-2;
+  }
+  .tiptap-editor-content ol,
+  .tiptap-viewer-content ol {
+    @apply list-decimal ml-4 mb-2;
+  }
+  .tiptap-editor-content li,
+  .tiptap-viewer-content li {
+    @apply text-sm text-secondary-foreground;
+  }
+  .tiptap-editor-content li p,
+  .tiptap-viewer-content li p {
+    @apply mb-0;
+  }
+
+  /* Inline formatting */
+  .tiptap-editor-content strong,
+  .tiptap-viewer-content strong {
+    @apply font-subheading text-foreground;
+  }
+  .tiptap-editor-content em,
+  .tiptap-viewer-content em {
+    @apply italic;
+  }
+
+  /* Blockquote */
+  .tiptap-editor-content blockquote,
+  .tiptap-viewer-content blockquote {
+    @apply border-l-2 border-primary pl-3 text-sm text-muted-foreground italic my-2;
+  }
+
+  /* Inline code */
+  .tiptap-editor-content code,
+  .tiptap-viewer-content code {
+    @apply rounded bg-muted/50 px-1.5 py-0.5 text-xs font-mono text-foreground;
+  }
+
+  /* Code block */
+  .tiptap-editor-content pre,
+  .tiptap-viewer-content pre {
+    @apply rounded-lg bg-muted/50 border border-border p-3 my-2 overflow-x-auto text-xs font-mono text-foreground;
+  }
+  .tiptap-editor-content pre code,
+  .tiptap-viewer-content pre code {
+    @apply bg-transparent p-0 rounded-none text-xs;
+  }
+
+  /* Tables */
+  .tiptap-editor-content table,
+  .tiptap-viewer-content table {
+    @apply text-xs border-collapse w-full my-3;
+  }
+  .tiptap-editor-content table,
+  .tiptap-viewer-content table {
+    @apply rounded-lg border border-border overflow-hidden;
+  }
+  .tiptap-editor-content th,
+  .tiptap-viewer-content th {
+    @apply text-left px-3 py-2 font-subheading text-foreground border-b border-border bg-muted/50;
+  }
+  .tiptap-editor-content td,
+  .tiptap-viewer-content td {
+    @apply px-3 py-2 text-secondary-foreground border-b border-border/50;
+  }
+  .tiptap-editor-content tr:last-child td,
+  .tiptap-viewer-content tr:last-child td {
+    @apply border-b-0;
+  }
+
+  /* Horizontal rule */
+  .tiptap-editor-content hr,
+  .tiptap-viewer-content hr {
+    @apply border-border my-4;
+  }
+
+  /* Links */
+  .tiptap-link {
+    @apply text-primary underline;
+  }
+
+  /* Google-Docs-style suggestion colors — must override Markdown component's
+     hardcoded color classes so the tint cascades into <p>, <strong>, <td>, etc. */
+  .diff-removed-text,
+  .diff-removed-text * {
+    color: hsl(var(--destructive)) !important;
+    text-decoration: line-through;
+    text-decoration-color: hsl(var(--destructive) / 0.5);
+  }
+
+  .diff-added-text,
+  .diff-added-text * {
+    color: hsl(var(--success)) !important;
+  }
+
   .login-bg {
     background: #031A20;
   }

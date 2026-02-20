@@ -7,38 +7,11 @@ import { ClipboardList, Check, X, Send, Bell, Sparkles, Edit3, Loader2, Eye, Eye
 import { toast } from "sonner";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { DiffView } from "./DiffView";
-import { MarkdownEditor } from "./MarkdownEditor";
-import { Markdown } from "./Markdown";
-import { fixGfmTables, containsTable } from "@/lib/compute-diff";
+import { TipTapEditor } from "./TipTapEditor";
 
 const providerLabels: Record<string, string> = {
   confluence: "Confluence",
   notion: "Notion",
-};
-
-/** Inline tracked-changes view: renders text with green highlights for additions and red strikethrough for removals. */
-const InlineChangesView = ({ before, after }: { before?: string | null; after: string }) => {
-  // New content — no before, just show rendered markdown
-  if (!before) {
-    return (
-      <div className="rounded-lg border border-success/20 bg-success/5 p-4 max-h-[60vh] overflow-y-auto">
-        <div className="text-[11px] font-overline text-success uppercase tracking-wider mb-2">New content</div>
-        <Markdown>{fixGfmTables(after)}</Markdown>
-      </div>
-    );
-  }
-
-  // No change
-  if (before === after) {
-    return (
-      <div className="rounded-lg border border-border bg-background p-4 max-h-[60vh] overflow-y-auto">
-        <Markdown>{fixGfmTables(after)}</Markdown>
-      </div>
-    );
-  }
-
-  // Render both versions as markdown
-  return <DiffView before={before} after={after} fullSize />;
 };
 
 export const StagingPanel = () => {
@@ -216,13 +189,7 @@ export const StagingPanel = () => {
             {/* Content area */}
             {editingId === edit.id ? (
               <div className="space-y-3">
-                {edit.before && (
-                  <div className="rounded-lg border border-border bg-muted/50 p-3">
-                    <div className="text-xs font-caption text-muted-foreground mb-1.5">Current version (read-only)</div>
-                    <Markdown>{fixGfmTables(edit.before)}</Markdown>
-                  </div>
-                )}
-                <MarkdownEditor markdown={editDraft} onChange={setEditDraft} />
+                <TipTapEditor markdown={editDraft} onChange={setEditDraft} />
                 <div className="flex gap-2 justify-end">
                   <button
                     onClick={() => setEditingId(null)}
@@ -246,7 +213,7 @@ export const StagingPanel = () => {
               </div>
             ) : (
               <div>
-                <InlineChangesView before={edit.before} after={edit.after} />
+                <DiffView before={edit.before} after={edit.after} fullSize />
 
                 {/* Action buttons */}
                 <div className="flex items-center justify-end mt-3">

@@ -23,6 +23,7 @@ export function usePlaybookSections() {
         id: s.id,
         title: s.title,
         content: s.content,
+        contentJson: s.content_json ?? null,
         depth: s.depth ?? 0,
         lastUpdated: s.last_updated,
         provider: s.provider ?? "pdf",
@@ -126,10 +127,15 @@ export function useUpdateSection() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, content }: { id: string; content: string }) => {
+    mutationFn: async ({ id, content, contentJson }: { id: string; content: string; contentJson?: Record<string, unknown> | null }) => {
+      const update: Record<string, unknown> = {
+        content,
+        last_updated: new Date().toISOString().split("T")[0],
+      };
+      if (contentJson !== undefined) update.content_json = contentJson;
       const { error } = await supabase
         .from("playbook_sections")
-        .update({ content, last_updated: new Date().toISOString().split("T")[0] })
+        .update(update)
         .eq("id", id);
       if (error) throw error;
     },

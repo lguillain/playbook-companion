@@ -7,8 +7,8 @@ import type { ChatMessage, StreamedEdit, PlaybookSection } from "@/lib/types";
 import { useChatStream, useChatHistory } from "@/hooks/use-chat";
 import { useApproveEdit, useRejectEdit, useUpdateEditText } from "@/hooks/use-staged-edits";
 import { Markdown } from "./Markdown";
+import { TipTapEditor } from "./TipTapEditor";
 import { DiffView } from "./DiffView";
-import { MarkdownEditor } from "./MarkdownEditor";
 
 // ── Section link card ────────────────────────────────────────────────
 
@@ -101,15 +101,7 @@ const DiffCard = ({ edit, onAccept, onReject, status, isProcessing }: DiffCardPr
   const diffContent = (fullSize: boolean) =>
     isEditing ? (
       <div className="space-y-3">
-        {edit.before && (
-          <div className={`rounded-lg border border-border bg-muted/50 ${fullSize ? "p-3" : "p-2"}`}>
-            <div className={`${fullSize ? "text-xs" : "text-[9px]"} font-caption text-muted-foreground mb-1.5`}>
-              Current version (read-only)
-            </div>
-            <Markdown>{edit.before}</Markdown>
-          </div>
-        )}
-        <MarkdownEditor markdown={editDraft} onChange={setEditDraft} />
+        <TipTapEditor markdown={editDraft} onChange={setEditDraft} />
         <div className="flex gap-2 justify-end">
           <button
             onClick={() => setIsEditing(false)}

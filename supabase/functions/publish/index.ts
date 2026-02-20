@@ -2,8 +2,47 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { env } from "../_shared/env.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { jsonToConfluence } from "../_shared/json-to-confluence.ts";
+import { jsonToNotion } from "../_shared/json-to-notion.ts";
+import { markdownToTiptap, type TipTapDoc, type TipTapNode } from "../_shared/tiptap-markdown.ts";
 
-/** Convert markdown to Confluence storage format (XHTML). */
+/** Get TipTap JSON for a section, preferring stored JSON, falling back to markdown parse. */
+function getSectionJson(section: { content: string; content_json?: Record<string, unknown> | null }): TipTapDoc | null {
+  if (section.content_json) {
+    return section.content_json as TipTapDoc;
+  }
+  try {
+    return markdownToTiptap(section.content);
+  } catch {
+    return null;
+  }
+}
+
+/** Merge multiple section JSONs into one doc, adding heading nodes for " > " titled sections. */
+function mergeSectionJsons(sections: { title: string; content: string; content_json?: Record<string, unknown> | null }[]): TipTapDoc {
+  const allNodes: TipTapNode[] = [];
+  for (const s of sections) {
+    // Extract heading from "PageTitle > HeadingText" title
+    const idx = s.title.indexOf(" > ");
+    const heading = idx >= 0 ? s.title.substring(idx + 3) : null;
+
+    if (heading) {
+      allNodes.push({
+        type: "heading",
+        attrs: { level: 1 },
+        content: [{ type: "text", text: heading }],
+      });
+    }
+
+    const json = getSectionJson(s);
+    if (json?.content) {
+      allNodes.push(...json.content);
+    }
+  }
+  return { type: "doc", content: allNodes };
+}
+
+/** Convert markdown to Confluence storage format (XHTML). Legacy fallback. */
 function markdownToStorage(md: string): string {
   let html = md;
 
@@ -125,10 +164,10 @@ Deno.serve(async (req) => {
     // Get unique sections that have approved edits
     const sectionIds = [...new Set(approvedEdits.map((e) => e.section_id))];
 
-    // Fetch all affected sections (with source_page_id)
+    // Fetch all affected sections (with source_page_id and content_json)
     const { data: affectedSections } = await supabase
       .from("playbook_sections")
-      .select("*")
+      .select("*, content_json")
       .in("id", sectionIds);
 
     if (!affectedSections || affectedSections.length === 0) {
@@ -161,7 +200,7 @@ Deno.serve(async (req) => {
     if (sourcePageIds.length > 0) {
       const { data: siblings } = await supabase
         .from("playbook_sections")
-        .select("*")
+        .select("*, content_json")
         .in("source_page_id", sourcePageIds)
         .order("sort_order", { ascending: true });
       allSiblings = siblings ?? [];
@@ -258,8 +297,11 @@ Deno.serve(async (req) => {
         publishedPageIds.add(sourcePageId);
 
         const siblings = allSiblingsByPage.get(sourcePageId) ?? _editedSections;
-        const reassembled = reassemblePageMarkdown(siblings);
-        const storageContent = markdownToStorage(reassembled);
+        // Prefer JSON → Confluence converter; fall back to markdown → regex
+        const mergedDoc = mergeSectionJsons(siblings);
+        const storageContent = mergedDoc.content?.length
+          ? jsonToConfluence(mergedDoc)
+          : markdownToStorage(reassemblePageMarkdown(siblings));
 
         // Get current page version (needed for update)
         const pageRes = await fetch(
@@ -355,7 +397,11 @@ Deno.serve(async (req) => {
 
         const pageData = await pageRes.json();
         const currentVersion = pageData.version?.number ?? 1;
-        const storageContent = markdownToStorage(section.content);
+        // Prefer JSON → Confluence converter
+        const sectionDoc = getSectionJson(section);
+        const storageContent = sectionDoc
+          ? jsonToConfluence(sectionDoc)
+          : markdownToStorage(section.content);
 
         const updateRes = await fetch(
           `https://api.atlassian.com/ex/confluence/${cloudId}/wiki/api/v2/pages/${existingPage.id}`,
@@ -398,7 +444,20 @@ Deno.serve(async (req) => {
         publishedPageIds.add(sourcePageId);
 
         const siblings = allSiblingsByPage.get(sourcePageId) ?? _editedSections;
-        const reassembled = reassemblePageMarkdown(siblings);
+        // Prefer JSON → Notion block converter
+        const mergedNotionDoc = mergeSectionJsons(siblings);
+        const notionBlocks = mergedNotionDoc.content?.length
+          ? jsonToNotion(mergedNotionDoc)
+          : [{
+              object: "block" as const,
+              type: "paragraph",
+              paragraph: {
+                rich_text: [{
+                  type: "text",
+                  text: { content: `[Updated ${new Date().toISOString().split("T")[0]}]\n${reassemblePageMarkdown(siblings).substring(0, 2000)}` },
+                }],
+              },
+            }];
 
         const updateRes = await fetch(
           `https://api.notion.com/v1/blocks/${sourcePageId}/children`,
@@ -409,22 +468,7 @@ Deno.serve(async (req) => {
               "Content-Type": "application/json",
               "Notion-Version": "2022-06-28",
             },
-            body: JSON.stringify({
-              children: [
-                {
-                  object: "block",
-                  type: "paragraph",
-                  paragraph: {
-                    rich_text: [
-                      {
-                        type: "text",
-                        text: { content: `[Updated ${new Date().toISOString().split("T")[0]}]\n${reassembled.substring(0, 2000)}` },
-                      },
-                    ],
-                  },
-                },
-              ],
-            }),
+            body: JSON.stringify({ children: notionBlocks }),
           }
         );
 
@@ -455,6 +499,21 @@ Deno.serve(async (req) => {
         const existingPage = searchData.results?.[0];
 
         if (existingPage) {
+          // Prefer JSON → Notion block converter
+          const sectionNotionDoc = getSectionJson(section);
+          const sectionNotionBlocks = sectionNotionDoc
+            ? jsonToNotion(sectionNotionDoc)
+            : [{
+                object: "block" as const,
+                type: "paragraph",
+                paragraph: {
+                  rich_text: [{
+                    type: "text",
+                    text: { content: `[Updated ${new Date().toISOString().split("T")[0]}]\n${section.content.substring(0, 2000)}` },
+                  }],
+                },
+              }];
+
           const updateRes = await fetch(
             `https://api.notion.com/v1/blocks/${existingPage.id}/children`,
             {
@@ -464,22 +523,7 @@ Deno.serve(async (req) => {
                 "Content-Type": "application/json",
                 "Notion-Version": "2022-06-28",
               },
-              body: JSON.stringify({
-                children: [
-                  {
-                    object: "block",
-                    type: "paragraph",
-                    paragraph: {
-                      rich_text: [
-                        {
-                          type: "text",
-                          text: { content: `[Updated ${new Date().toISOString().split("T")[0]}]\n${section.content.substring(0, 2000)}` },
-                        },
-                      ],
-                    },
-                  },
-                ],
-              }),
+              body: JSON.stringify({ children: sectionNotionBlocks }),
             }
           );
 

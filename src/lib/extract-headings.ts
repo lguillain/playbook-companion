@@ -5,7 +5,7 @@ export type Heading = {
 };
 
 /** Turn heading text into a URL-safe slug. */
-function slugify(text: string): string {
+export function slugify(text: string): string {
   return text
     .toLowerCase()
     .replace(/[^\w\s-]/g, "")
