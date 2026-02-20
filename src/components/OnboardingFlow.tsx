@@ -9,6 +9,7 @@ import { useConfluenceSpaces, useConfluencePages } from "@/hooks/use-confluence-
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ConfluencePageSummary } from "@/lib/types";
+import { TASKBASE_PLAYBOOK } from "@/data/taskbase-playbook";
 
 type PageNode = ConfluencePageSummary & { children: PageNode[]; depth: number };
 
@@ -53,6 +54,7 @@ function getDescendantIds(node: PageNode): string[] {
 }
 
 const sources = [
+  { id: "taskbase", name: "TaskBase Playbook", icon: "TB", desc: "Start with our ready-made sales playbook", isOAuth: false },
   { id: "notion", name: "Notion", icon: "N", desc: "Connect your Notion workspace", isOAuth: true },
   { id: "confluence", name: "Confluence", icon: "C", desc: "Link your Confluence space", isOAuth: true },
   { id: "pdf", name: "PDF Upload", icon: "P", desc: "Upload a playbook PDF", isOAuth: false },
@@ -134,7 +136,17 @@ export const OnboardingFlow = ({ onComplete }: { onComplete: () => void }) => {
     const source = sources.find((s) => s.id === selected);
     if (!source) return;
 
-    if (source.isOAuth) {
+    if (selected === "taskbase") {
+      setStep("analyzing");
+      try {
+        setImportPhase("extracting");
+        await startImport.mutateAsync({ provider: "taskbase", content: TASKBASE_PLAYBOOK });
+        onComplete();
+      } catch (err) {
+        setImportError((err as Error).message);
+        setStep("source");
+      }
+    } else if (source.isOAuth) {
       try {
         await startOAuth(selected as "notion" | "confluence");
         // This will redirect the browser — won't reach here
@@ -321,7 +333,12 @@ export const OnboardingFlow = ({ onComplete }: { onComplete: () => void }) => {
                 disabled={!selected}
                 className="w-full flex items-center justify-center gap-2 rounded-xl gradient-primary py-3 text-sm font-subheading text-primary-foreground disabled:opacity-30 transition-opacity"
               >
-                {selected === "pdf" ? (
+                {selected === "taskbase" ? (
+                  <>
+                    Use Template & Analyze
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                ) : selected === "pdf" ? (
                   <>
                     <Upload className="w-4 h-4" />
                     Upload & Analyze

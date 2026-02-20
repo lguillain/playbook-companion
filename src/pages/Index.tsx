@@ -46,7 +46,7 @@ const Index = () => {
 
       <AppHeader activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      <main className="max-w-[1600px] mx-auto px-6 py-8">
+      <main className="max-w-[1600px] mx-auto px-6 py-8 min-h-[calc(100vh-8rem)]">
         {activeTab === "dashboard" && (
           <div className="space-y-5">
             <HealthScore activeFilter={statusFilter} onFilterChange={(f) => setStatusFilter(f === statusFilter ? null : f)} />
