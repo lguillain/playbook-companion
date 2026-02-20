@@ -1,5 +1,5 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { getSkillsPromptBlock, ALL_SKILL_IDS } from "./skills.ts";
+import { getSkillsPromptBlock, ALL_SKILL_IDS, SKILL_CATEGORIES } from "./skills.ts";
 
 type SupabaseAdmin = ReturnType<typeof createClient>;
 
@@ -262,4 +262,179 @@ Return this JSON structure:
     .eq("id", userId);
 
   return { sectionsAnalyzed: sections.length };
+}
+
+// ── Skill name lookup ──────────────────────────────────────────────
+
+const SKILL_NAME_MAP = new Map<string, string>(
+  SKILL_CATEGORIES.flatMap((c) => c.skills.map((s) => [s.id, s.name] as const)),
+);
+
+// ── Coverage-note backfill ─────────────────────────────────────────
+
+type BackfillNotes = {
+  skillNotes: { id: string; reason: string }[];
+  sectionNotes: { skillId: string; sectionId: string; reason: string }[];
+};
+
+/**
+ * Fill in missing `coverage_note` values for partial/missing skills.
+ * Makes a cheap Sonnet call with only the gapped skills + their sections.
+ */
+export async function backfillCoverageNotes(
+  adminClient: SupabaseAdmin,
+  userId: string,
+  anthropicApiKey: string,
+): Promise<{ filled: number }> {
+  // 1. Get ALL partial/missing user_skills (need status for prompt context)
+  const { data: partialMissingSkills, error: usErr } = await adminClient
+    .from("user_skills")
+    .select("skill_id, status, coverage_note")
+    .eq("user_id", userId)
+    .in("status", ["partial", "missing"]);
+
+  if (usErr) throw usErr;
+  if (!partialMissingSkills || partialMissingSkills.length === 0) return { filled: 0 };
+
+  const allPartialMissingIds = partialMissingSkills.map((r) => r.skill_id);
+  const skillStatusMap = new Map(partialMissingSkills.map((r) => [r.skill_id, r]));
+
+  // Skills where user_skills.coverage_note is still null
+  const userSkillGapIds = new Set(
+    partialMissingSkills.filter((r) => !r.coverage_note).map((r) => r.skill_id),
+  );
+
+  // 2. Fetch section_skills for ALL partial/missing skills where coverage_note IS NULL
+  //    This catches section-level gaps even when the user_skill already has a note
+  const { data: sectionRows, error: ssErr } = await adminClient
+    .from("section_skills")
+    .select("skill_id, section_id, coverage_note, playbook_sections(id, title, content)")
+    .eq("user_id", userId)
+    .in("skill_id", allPartialMissingIds)
+    .is("coverage_note", null);
+
+  if (ssErr) throw ssErr;
+
+  // Build context: skill → sections with missing notes
+  type SectionCtx = { sectionId: string; title: string; snippet: string };
+  const skillSections = new Map<string, SectionCtx[]>();
+
+  for (const row of sectionRows ?? []) {
+    const sec = (row as any).playbook_sections as
+      | { id: string; title: string; content: string }
+      | null;
+    if (!sec) continue;
+    const list = skillSections.get(row.skill_id) ?? [];
+    list.push({
+      sectionId: sec.id,
+      title: sec.title,
+      snippet: sec.content.slice(0, 800),
+    });
+    skillSections.set(row.skill_id, list);
+  }
+
+  // Skills that need any backfill: user_skill note is null OR has section-level gaps
+  const needsBackfillIds = new Set([
+    ...userSkillGapIds,
+    ...skillSections.keys(),
+  ]);
+
+  if (needsBackfillIds.size === 0) return { filled: 0 };
+
+  // 3. Build prompt — include all skills that need any kind of backfill
+  const skillsForPrompt = [...needsBackfillIds].map((id) => {
+    const skill = skillStatusMap.get(id)!;
+    return { skill_id: id, status: skill.status };
+  });
+
+  const skillLines = skillsForPrompt.map((s) => {
+    const name = SKILL_NAME_MAP.get(s.skill_id) ?? s.skill_id;
+    const secs = skillSections.get(s.skill_id) ?? [];
+    const secDescs = secs.length > 0
+      ? secs
+          .map(
+            (sc) =>
+              `    Section "${sc.title}" (id:${sc.sectionId}):\n      ${sc.snippet.replace(/\n/g, "\n      ")}`,
+          )
+          .join("\n")
+      : "    (no mapped sections)";
+    return `- ${s.skill_id} "${name}" [${s.status}]\n  Mapped sections:\n${secDescs}`;
+  });
+
+  const prompt = `You are reviewing a sales playbook skill analysis. The following skills were marked partial or missing but are missing an explanation (coverage_note). For each, write a concise 1-2 sentence note explaining what's lacking or what should be added.
+
+Skills needing notes:
+${skillLines.join("\n\n")}
+
+Return JSON only:
+{
+  "skillNotes": [
+    { "id": "i2", "reason": "..." }
+  ],
+  "sectionNotes": [
+    { "skillId": "i2", "sectionId": "<uuid>", "reason": "..." }
+  ]
+}
+
+Rules:
+- skillNotes: one entry per skill with an overall gap summary
+- sectionNotes: one entry per (skill, section) pair explaining what's missing in THAT section specifically
+- Keep reasons concise and actionable (1-2 sentences)
+- Return ONLY valid JSON`;
+
+  // 4. Call Claude Sonnet
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": anthropicApiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 4096,
+      temperature: 0,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+
+  if (!response.ok) {
+    const errBody = await response.text();
+    throw new Error(`Backfill Claude API error: ${response.status} – ${errBody}`);
+  }
+
+  const data = await response.json();
+  const text = data.content[0].text;
+
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error("Failed to parse backfill response");
+
+  const notes: BackfillNotes = JSON.parse(jsonMatch[0]);
+  let filled = 0;
+
+  // 5. Update user_skills coverage notes (only where still null)
+  for (const note of notes.skillNotes ?? []) {
+    if (!needsBackfillIds.has(note.id)) continue;
+    const { error } = await adminClient
+      .from("user_skills")
+      .update({ coverage_note: note.reason })
+      .eq("user_id", userId)
+      .eq("skill_id", note.id)
+      .is("coverage_note", null);
+    if (!error) filled++;
+  }
+
+  // 6. Update section_skills coverage notes (only where still null)
+  for (const note of notes.sectionNotes ?? []) {
+    if (!needsBackfillIds.has(note.skillId)) continue;
+    await adminClient
+      .from("section_skills")
+      .update({ coverage_note: note.reason })
+      .eq("user_id", userId)
+      .eq("skill_id", note.skillId)
+      .eq("section_id", note.sectionId)
+      .is("coverage_note", null);
+  }
+
+  return { filled };
 }

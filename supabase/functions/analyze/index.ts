@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { analyzeSections } from "../_shared/analyze-sections.ts";
+import { analyzeSections, backfillCoverageNotes } from "../_shared/analyze-sections.ts";
 import { env } from "../_shared/env.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
@@ -77,6 +77,12 @@ Deno.serve(async (req) => {
       user.id,
       apiKey,
     );
+
+    try {
+      await backfillCoverageNotes(adminClient, user.id, apiKey);
+    } catch (err) {
+      console.error("Coverage note backfill failed (non-fatal):", err);
+    }
 
     return new Response(
       JSON.stringify({ status: "completed", ...result }),

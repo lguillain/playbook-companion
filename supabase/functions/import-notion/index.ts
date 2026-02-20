@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { env } from "../_shared/env.ts";
 import { splitIntoSections } from "../_shared/split-sections.ts";
-import { analyzeSections } from "../_shared/analyze-sections.ts";
+import { analyzeSections, backfillCoverageNotes } from "../_shared/analyze-sections.ts";
 import { scopedDeleteByProvider } from "../_shared/scoped-delete.ts";
 
 const ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY");
@@ -400,6 +400,12 @@ Deno.serve(async (req) => {
       user.id,
       ANTHROPIC_API_KEY!,
     );
+
+    try {
+      await backfillCoverageNotes(adminClient, user.id, ANTHROPIC_API_KEY!);
+    } catch (err) {
+      console.error("Coverage note backfill failed (non-fatal):", err);
+    }
 
     // Mark import complete
     await adminClient
