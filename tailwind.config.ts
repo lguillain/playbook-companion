@@ -14,8 +14,15 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['DM Sans', 'Inter', 'system-ui', 'sans-serif'],
+        sans: ['Work Sans', 'Inter', 'system-ui', 'sans-serif'],
         mono: ['Inter', 'system-ui', 'sans-serif'],
+      },
+      fontWeight: {
+        body: '420',       // Body L/M/S
+        heading: '440',    // H1–H4
+        subheading: '460', // H5, Button L/M
+        caption: '480',    // H6, Button S
+        overline: '500',   // Overline
       },
       colors: {
         border: "hsl(var(--border))",

@@ -24,8 +24,8 @@ export const HealthScore = ({ activeFilter, onFilterChange }: { activeFilter: st
     >
       <div className="flex items-center gap-6 flex-wrap">
         <div className="flex items-center gap-3">
-          <span className="text-sm font-semibold text-foreground">Playbook Health</span>
-          <span className={`text-xl font-bold font-mono ${healthColor}`}>{health.score}</span>
+          <span className="text-sm font-subheading text-foreground">Playbook Health</span>
+          <span className={`text-xl font-overline font-mono ${healthColor}`}>{health.score}</span>
           <span className="text-xs text-muted-foreground">/ 100</span>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -55,12 +55,12 @@ export const HealthScore = ({ activeFilter, onFilterChange }: { activeFilter: st
 function FilterPill({ icon: Icon, label, value, color, active, onClick }: { icon: any; label: string; value: number; color: string; active: boolean; onClick: () => void }) {
   return (
     <button
-      className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${active ? "bg-primary/10 ring-2 ring-primary/30" : "bg-muted/50 hover:bg-muted/80"}`}
+      className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-subheading transition-all ${active ? "bg-primary/10 ring-2 ring-primary/30" : "bg-muted/50 hover:bg-muted/80"}`}
       onClick={onClick}
     >
       <Icon className={`w-3.5 h-3.5 ${color}`} />
       <span className="text-muted-foreground">{label}</span>
-      <span className={`font-bold font-mono ${color}`}>{value}</span>
+      <span className={`font-overline font-mono ${color}`}>{value}</span>
     </button>
   );
 }

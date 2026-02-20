@@ -285,7 +285,7 @@ export const OnboardingFlow = ({ onComplete }: { onComplete: () => void }) => {
         <AnimatePresence mode="wait">
           {step === "source" && (
             <motion.div key="source" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <h2 className="text-2xl font-bold text-foreground mb-1">Connect your playbook</h2>
+              <h2 className="text-2xl text-foreground mb-1">Connect your playbook</h2>
               <p className="text-sm text-muted-foreground mb-6">Choose where your sales playbook lives</p>
 
               <div className="space-y-2 mb-6">
@@ -299,9 +299,9 @@ export const OnboardingFlow = ({ onComplete }: { onComplete: () => void }) => {
                         : "border-border bg-muted/30 hover:border-muted-foreground/30"
                     }`}
                   >
-                    <span className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">{src.icon}</span>
+                    <span className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-sm font-overline text-primary">{src.icon}</span>
                     <div className="text-left">
-                      <div className="text-sm font-semibold text-foreground">{src.name}</div>
+                      <div className="text-sm font-subheading text-foreground">{src.name}</div>
                       <div className="text-xs text-muted-foreground">{src.desc}</div>
                     </div>
                     {selected === src.id && <CheckCircle2 className="w-5 h-5 text-primary ml-auto" />}
@@ -319,7 +319,7 @@ export const OnboardingFlow = ({ onComplete }: { onComplete: () => void }) => {
               <button
                 onClick={handleConnect}
                 disabled={!selected}
-                className="w-full flex items-center justify-center gap-2 rounded-xl gradient-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-30 transition-opacity"
+                className="w-full flex items-center justify-center gap-2 rounded-xl gradient-primary py-3 text-sm font-subheading text-primary-foreground disabled:opacity-30 transition-opacity"
               >
                 {selected === "pdf" ? (
                   <>
@@ -346,7 +346,7 @@ export const OnboardingFlow = ({ onComplete }: { onComplete: () => void }) => {
                 Back
               </button>
 
-              <h2 className="text-2xl font-bold text-foreground mb-1">Select a space</h2>
+              <h2 className="text-2xl text-foreground mb-1">Select a space</h2>
               <p className="text-sm text-muted-foreground mb-6">Choose the Confluence space that contains your playbook</p>
 
               {spacesQuery.isLoading && (
@@ -373,11 +373,11 @@ export const OnboardingFlow = ({ onComplete }: { onComplete: () => void }) => {
                         onClick={() => handleSpaceSelect(space.id)}
                         className="w-full flex items-center gap-4 rounded-xl p-4 border border-border bg-muted/30 hover:border-muted-foreground/30 transition-all text-left"
                       >
-                        <span className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold text-primary uppercase">
+                        <span className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-overline text-primary uppercase">
                           {space.key.slice(0, 2)}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <div className="text-sm font-semibold text-foreground truncate">{space.name}</div>
+                          <div className="text-sm font-subheading text-foreground truncate">{space.name}</div>
                           <div className="text-xs text-muted-foreground">{space.key}</div>
                         </div>
                         <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -403,7 +403,7 @@ export const OnboardingFlow = ({ onComplete }: { onComplete: () => void }) => {
                 Back
               </button>
 
-              <h2 className="text-2xl font-bold text-foreground mb-1">Select pages</h2>
+              <h2 className="text-2xl text-foreground mb-1">Select pages</h2>
               <p className="text-sm text-muted-foreground mb-4">Choose which pages contain your sales playbook</p>
 
               {pagesQuery.isLoading && (
@@ -449,7 +449,7 @@ export const OnboardingFlow = ({ onComplete }: { onComplete: () => void }) => {
                   <button
                     onClick={handleConfluenceImport}
                     disabled={selectedPageIds.size === 0}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl gradient-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-30 transition-opacity"
+                    className="w-full flex items-center justify-center gap-2 rounded-xl gradient-primary py-3 text-sm font-subheading text-primary-foreground disabled:opacity-30 transition-opacity"
                   >
                     Import {selectedPageIds.size} {selectedPageIds.size === 1 ? "page" : "pages"}
                     <ArrowRight className="w-4 h-4" />
@@ -466,7 +466,7 @@ export const OnboardingFlow = ({ onComplete }: { onComplete: () => void }) => {
           {step === "analyzing" && (
             <motion.div key="analyzing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center py-8">
               <Loader2 className="w-10 h-10 text-primary mx-auto mb-4 animate-spin" />
-              <h2 className="text-xl font-bold text-foreground mb-2">
+              <h2 className="text-xl text-foreground mb-2">
                 {importPhase === "extracting" ? "Extracting content" : "Analyzing your playbook"}
               </h2>
               <p className="text-sm text-muted-foreground">
@@ -501,11 +501,11 @@ export const OnboardingFlow = ({ onComplete }: { onComplete: () => void }) => {
               <div className="w-14 h-14 rounded-2xl gradient-primary mx-auto mb-4 flex items-center justify-center">
                 <CheckCircle2 className="w-7 h-7 text-primary-foreground" />
               </div>
-              <h2 className="text-xl font-bold text-foreground mb-2">Playbook connected!</h2>
+              <h2 className="text-xl text-foreground mb-2">Playbook connected!</h2>
               <p className="text-sm text-muted-foreground mb-6">We found {gapCount} gaps in your skills coverage. Let's fix them.</p>
               <button
                 onClick={onComplete}
-                className="rounded-xl gradient-primary px-6 py-3 text-sm font-semibold text-primary-foreground"
+                className="rounded-xl gradient-primary px-6 py-3 text-sm font-subheading text-primary-foreground"
               >
                 View Dashboard
               </button>

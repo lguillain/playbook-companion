@@ -23,7 +23,7 @@ const SectionPill = ({ title, onClick }: SectionLinkCardProps) => (
     className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 hover:bg-primary/10 pl-2 pr-2.5 py-1 text-left transition-colors group flex-shrink-0"
   >
     <FileText className="w-3 h-3 text-primary flex-shrink-0" />
-    <span className="text-[11px] font-medium text-foreground whitespace-nowrap">{title}</span>
+    <span className="text-[11px] font-subheading text-foreground whitespace-nowrap">{title}</span>
     <ArrowRight className="w-3 h-3 text-primary opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
   </button>
 );
@@ -103,7 +103,7 @@ const DiffCard = ({ edit, onAccept, onReject, status, isProcessing }: DiffCardPr
       <div className="space-y-3">
         {edit.before && (
           <div className={`rounded-lg border border-border bg-muted/50 ${fullSize ? "p-3" : "p-2"}`}>
-            <div className={`${fullSize ? "text-xs" : "text-[9px]"} font-semibold text-muted-foreground mb-1.5`}>
+            <div className={`${fullSize ? "text-xs" : "text-[9px]"} font-caption text-muted-foreground mb-1.5`}>
               Current version (read-only)
             </div>
             <Markdown>{edit.before}</Markdown>
@@ -113,14 +113,14 @@ const DiffCard = ({ edit, onAccept, onReject, status, isProcessing }: DiffCardPr
         <div className="flex gap-2 justify-end">
           <button
             onClick={() => setIsEditing(false)}
-            className="rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+            className="rounded-lg px-3 py-1.5 text-xs font-subheading text-muted-foreground hover:text-foreground transition-colors"
           >
             Cancel
           </button>
           <button
             disabled={!editDraft.trim() || editDraft === effectiveAfter || updateEditText.isPending}
             onClick={handleSave}
-            className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-30 transition-opacity"
+            className="rounded-lg bg-primary px-3 py-1.5 text-xs font-subheading text-primary-foreground disabled:opacity-30 transition-opacity"
           >
             {updateEditText.isPending ? "Saving..." : "Save"}
           </button>
@@ -135,7 +135,7 @@ const DiffCard = ({ edit, onAccept, onReject, status, isProcessing }: DiffCardPr
       <div className={`flex gap-2 ${fullSize ? "pt-2" : "pt-1"}`}>
         <button
           onClick={startEditing}
-          className={`flex items-center justify-center gap-1 rounded-md border border-border hover:bg-muted/50 px-2 ${fullSize ? "py-2 text-sm" : "py-1.5 text-[11px]"} font-medium text-muted-foreground hover:text-foreground transition-colors`}
+          className={`flex items-center justify-center gap-1 rounded-md border border-border hover:bg-muted/50 px-2 ${fullSize ? "py-2 text-sm" : "py-1.5 text-[11px]"} font-subheading text-muted-foreground hover:text-foreground transition-colors`}
         >
           <Pencil className="w-3 h-3" />
           Edit
@@ -143,7 +143,7 @@ const DiffCard = ({ edit, onAccept, onReject, status, isProcessing }: DiffCardPr
         <button
           onClick={() => { onReject(edit.id); setOpen(false); }}
           disabled={isProcessing}
-          className={`flex-1 flex items-center justify-center gap-1 rounded-md bg-destructive/15 hover:bg-destructive/25 px-2 ${fullSize ? "py-2 text-sm" : "py-1.5 text-[11px]"} font-semibold text-destructive transition-colors disabled:opacity-30`}
+          className={`flex-1 flex items-center justify-center gap-1 rounded-md bg-destructive/15 hover:bg-destructive/25 px-2 ${fullSize ? "py-2 text-sm" : "py-1.5 text-[11px]"} font-subheading text-destructive transition-colors disabled:opacity-30`}
         >
           {isProcessing ? <Loader2 className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />}
           Reject
@@ -151,7 +151,7 @@ const DiffCard = ({ edit, onAccept, onReject, status, isProcessing }: DiffCardPr
         <button
           onClick={() => { onAccept(edit.id); setOpen(false); }}
           disabled={isProcessing}
-          className={`flex-1 flex items-center justify-center gap-1 rounded-md bg-success/15 hover:bg-success/25 px-2 ${fullSize ? "py-2 text-sm" : "py-1.5 text-[11px]"} font-semibold text-success transition-colors disabled:opacity-30`}
+          className={`flex-1 flex items-center justify-center gap-1 rounded-md bg-success/15 hover:bg-success/25 px-2 ${fullSize ? "py-2 text-sm" : "py-1.5 text-[11px]"} font-subheading text-success transition-colors disabled:opacity-30`}
         >
           {isProcessing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
           Accept
@@ -175,9 +175,9 @@ const DiffCard = ({ edit, onAccept, onReject, status, isProcessing }: DiffCardPr
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <GitBranch className="w-3 h-3 text-primary" />
-            <span className="text-[11px] font-semibold text-foreground">{edit.sectionTitle}</span>
+            <span className="text-[11px] font-subheading text-foreground">{edit.sectionTitle}</span>
             {isResolved && (
-              <span className={`rounded px-1.5 py-0.5 text-[9px] font-mono font-semibold ${
+              <span className={`rounded px-1.5 py-0.5 text-[9px] font-mono font-caption ${
                 status === "accepted"
                   ? "bg-success/15 text-success"
                   : "bg-destructive/15 text-destructive"
@@ -189,7 +189,7 @@ const DiffCard = ({ edit, onAccept, onReject, status, isProcessing }: DiffCardPr
           {!isEditing && (
             <button
               onClick={() => setOpen(true)}
-              className="flex items-center gap-1 text-[9px] font-semibold text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-1 text-[9px] font-caption text-muted-foreground hover:text-foreground transition-colors"
             >
               <Maximize2 className="w-3 h-3" />
               Expand
@@ -219,9 +219,9 @@ const DiffCard = ({ edit, onAccept, onReject, status, isProcessing }: DiffCardPr
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <GitBranch className="w-4 h-4 text-primary" />
-                <span className="text-sm font-semibold text-foreground">{edit.sectionTitle}</span>
+                <span className="text-sm font-subheading text-foreground">{edit.sectionTitle}</span>
                 {isResolved && (
-                  <span className={`rounded px-1.5 py-0.5 text-[10px] font-mono font-semibold ${
+                  <span className={`rounded px-1.5 py-0.5 text-[10px] font-mono font-caption ${
                     status === "accepted"
                       ? "bg-success/15 text-success"
                       : "bg-destructive/15 text-destructive"
@@ -491,7 +491,7 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
           <Sparkles className="w-4 h-4 text-primary-foreground" />
         </div>
         <div>
-          <h2 className="text-sm font-semibold text-foreground">AI Assistant</h2>
+          <h2 className="text-sm text-foreground">AI Assistant</h2>
           <p className="text-[11px] text-muted-foreground">{isEmbedded ? "Context-aware help" : "Draft and edit playbook content"}</p>
         </div>
       </div>
@@ -631,7 +631,7 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
                 <button
                   key={option}
                   onClick={() => handleSendText(option)}
-                  className="rounded-full border border-primary/20 bg-primary/10 hover:bg-primary/20 px-3 py-1.5 text-xs font-medium text-primary transition-colors"
+                  className="rounded-full border border-primary/20 bg-primary/10 hover:bg-primary/20 px-3 py-1.5 text-xs font-subheading text-primary transition-colors"
                 >
                   {option}
                 </button>
@@ -685,7 +685,7 @@ export const ChatEditor = ({ currentSection, sectionId, isEmbedded = false, pref
       {/* Referenced sections bar */}
       {mentionedSections.length > 0 && onNavigateToSection && (
         <div className="border-t border-border px-3 py-2 flex items-center gap-2 overflow-x-auto">
-          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap flex-shrink-0">Go to</span>
+          <span className="text-[10px] font-caption text-muted-foreground uppercase tracking-wide whitespace-nowrap flex-shrink-0">Go to</span>
           {mentionedSections.map((s) => (
             <SectionPill
               key={s.id}

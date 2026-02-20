@@ -96,7 +96,7 @@ export const TableDiffView = ({ before, after }: TableDiffViewProps) => {
             {headerDiffs.map((hd, i) => (
               <th
                 key={i}
-                className="text-left px-3 py-2 font-semibold text-foreground border-b border-border"
+                className="text-left px-3 py-2 font-subheading text-foreground border-b border-border"
               >
                 <DiffCellContent segments={hd} />
               </th>

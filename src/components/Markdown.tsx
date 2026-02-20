@@ -44,19 +44,19 @@ export const Markdown = ({ children, className = "" }: MarkdownProps) => {
       components={{
         h1: ({ children }) => {
           const id = uniqueSlug(childrenToText(children));
-          return <h1 id={id} className="text-lg font-bold text-foreground mt-5 mb-2">{children}</h1>;
+          return <h1 id={id} className="text-lg text-foreground mt-5 mb-2">{children}</h1>;
         },
         h2: ({ children }) => {
           const id = uniqueSlug(childrenToText(children));
-          return <h2 id={id} className="text-base font-bold text-foreground mt-4 mb-2">{children}</h2>;
+          return <h2 id={id} className="text-base text-foreground mt-4 mb-2">{children}</h2>;
         },
         h3: ({ children }) => {
           const id = uniqueSlug(childrenToText(children));
-          return <h3 id={id} className="text-sm font-semibold text-foreground mt-3 mb-1.5">{children}</h3>;
+          return <h3 id={id} className="text-sm text-foreground mt-3 mb-1.5">{children}</h3>;
         },
         h4: ({ children }) => {
           const id = uniqueSlug(childrenToText(children));
-          return <h4 id={id} className="text-sm font-semibold text-foreground mt-2 mb-1">{children}</h4>;
+          return <h4 id={id} className="text-sm text-foreground mt-2 mb-1">{children}</h4>;
         },
         p: ({ children }) => (
           <p className="text-sm text-secondary-foreground leading-relaxed mb-2">{children}</p>
@@ -71,7 +71,7 @@ export const Markdown = ({ children, className = "" }: MarkdownProps) => {
           <li className="text-sm text-secondary-foreground">{children}</li>
         ),
         strong: ({ children }) => (
-          <strong className="font-semibold text-foreground">{children}</strong>
+          <strong className="font-subheading text-foreground">{children}</strong>
         ),
         em: ({ children }) => (
           <em className="italic">{children}</em>
@@ -104,7 +104,7 @@ export const Markdown = ({ children, className = "" }: MarkdownProps) => {
           <tr className="border-b border-border/50 last:border-b-0">{children}</tr>
         ),
         th: ({ children }) => (
-          <th className="text-left px-3 py-2 font-semibold text-foreground border-b border-border">{children}</th>
+          <th className="text-left px-3 py-2 font-subheading text-foreground border-b border-border">{children}</th>
         ),
         td: ({ children }) => (
           <td className="px-3 py-2 text-secondary-foreground">{children}</td>

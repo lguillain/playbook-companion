@@ -122,7 +122,7 @@ function ToolbarBtn({ label, shortcut, onClick }: { label: string; shortcut?: st
       type="button"
       onClick={onClick}
       title={shortcut ? `${label} (Cmd+${shortcut})` : label}
-      className="px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+      className="px-2 py-1 text-[11px] font-caption text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
     >
       {label}
     </button>

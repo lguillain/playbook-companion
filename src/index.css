@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Work+Sans:wght@300..700&display=swap');
 
 @layer base {
   :root {
@@ -15,17 +15,17 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 16%;
 
-    --primary: 262 60% 55%;
+    --primary: 278 99% 45%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 260 20% 95%;
-    --secondary-foreground: 260 15% 35%;
+    --secondary: 275 20% 95%;
+    --secondary-foreground: 275 15% 35%;
 
-    --muted: 260 10% 95%;
-    --muted-foreground: 260 8% 50%;
+    --muted: 275 10% 95%;
+    --muted-foreground: 275 8% 50%;
 
-    --accent: 260 20% 93%;
-    --accent-foreground: 260 15% 30%;
+    --accent: 275 20% 93%;
+    --accent-foreground: 275 15% 30%;
 
     --destructive: 0 68% 55%;
     --destructive-foreground: 0 0% 100%;
@@ -36,32 +36,32 @@
     --success: 152 55% 42%;
     --success-foreground: 0 0% 100%;
 
-    --border: 260 12% 90%;
-    --input: 260 12% 90%;
-    --ring: 262 60% 55%;
+    --border: 275 12% 90%;
+    --input: 275 12% 90%;
+    --ring: 278 99% 45%;
 
     --radius: 0.75rem;
 
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 260 10% 40%;
-    --sidebar-primary: 262 60% 55%;
+    --sidebar-foreground: 275 10% 40%;
+    --sidebar-primary: 278 99% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 260 20% 95%;
-    --sidebar-accent-foreground: 260 15% 30%;
-    --sidebar-border: 260 12% 92%;
-    --sidebar-ring: 262 60% 55%;
+    --sidebar-accent: 275 20% 95%;
+    --sidebar-accent-foreground: 275 15% 30%;
+    --sidebar-border: 275 12% 92%;
+    --sidebar-ring: 278 99% 45%;
 
-    --font-sans: 'DM Sans', 'Inter', system-ui, sans-serif;
+    --font-sans: 'Work Sans', 'Inter', system-ui, sans-serif;
     --font-mono: 'Inter', system-ui, sans-serif;
 
-    --gradient-primary: linear-gradient(135deg, hsl(262 60% 55%), hsl(280 65% 60%));
+    --gradient-primary: hsl(278 99% 45%);
     --gradient-card: linear-gradient(135deg, hsl(0 0% 100%), hsl(260 20% 98%));
     --gradient-health-good: linear-gradient(135deg, hsl(152 55% 42%), hsl(162 50% 48%));
     --gradient-health-warn: linear-gradient(135deg, hsl(38 92% 50%), hsl(28 85% 52%));
     --gradient-health-bad: linear-gradient(135deg, hsl(0 68% 55%), hsl(15 70% 50%));
 
-    --shadow-glow: 0 0 30px -5px hsl(262 60% 55% / 0.15);
-    --shadow-card: 0 1px 3px hsl(260 10% 50% / 0.06), 0 4px 16px hsl(260 10% 50% / 0.04);
+    --shadow-glow: 0 0 30px -5px hsl(278 99% 45% / 0.15);
+    --shadow-card: 0 1px 3px hsl(275 10% 50% / 0.06), 0 4px 16px hsl(275 10% 50% / 0.04);
   }
 }
 
@@ -71,13 +71,34 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased font-body;
     font-family: var(--font-sans);
+    letter-spacing: -0.05em;
+    line-height: 1.5;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-sans);
-    @apply font-bold tracking-tight;
+  h1, h2, h3 {
+    @apply font-heading;
+    letter-spacing: -0.06em;
+    line-height: 1.2;
+  }
+
+  h4 {
+    @apply font-heading;
+    letter-spacing: -0.06em;
+    line-height: 1.4;
+  }
+
+  h5 {
+    @apply font-subheading;
+    letter-spacing: -0.05em;
+    line-height: 1.4;
+  }
+
+  h6 {
+    @apply font-caption;
+    letter-spacing: -0.05em;
+    line-height: 1.5;
   }
 }
 

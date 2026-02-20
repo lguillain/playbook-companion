@@ -23,7 +23,7 @@ export const DiffView = ({ before, after, fullSize = false }: DiffViewProps) => 
   if (!before) {
     return (
       <div>
-        <span className={`${labelClass} font-semibold text-muted-foreground uppercase tracking-wider`}>
+        <span className={`${labelClass} font-overline text-muted-foreground uppercase tracking-wider`}>
           New content
         </span>
         <div className={`mt-1 rounded bg-success/5 border border-success/10 ${padClass} text-foreground leading-relaxed min-h-[40px] ${maxH}`}>
@@ -37,7 +37,7 @@ export const DiffView = ({ before, after, fullSize = false }: DiffViewProps) => 
   if (before === after) {
     return (
       <div>
-        <span className={`${labelClass} font-semibold text-muted-foreground uppercase tracking-wider`}>
+        <span className={`${labelClass} font-overline text-muted-foreground uppercase tracking-wider`}>
           No changes
         </span>
         <div className={`mt-1 rounded bg-muted/30 border border-border ${padClass} text-foreground leading-relaxed min-h-[40px] ${maxH}`}>
@@ -75,7 +75,7 @@ const TableDiff = ({ before, after, labelClass, padClass, maxH }: InnerDiffProps
     return (
       <div>
         <div className="flex items-center gap-2 mb-1">
-          <span className={`${labelClass} font-semibold text-muted-foreground uppercase tracking-wider`}>
+          <span className={`${labelClass} font-overline text-muted-foreground uppercase tracking-wider`}>
             Changes
           </span>
           <span className={`${labelClass} text-muted-foreground/60`}>
@@ -93,7 +93,7 @@ const TableDiff = ({ before, after, labelClass, padClass, maxH }: InnerDiffProps
   return (
     <div className="space-y-2">
       <div>
-        <span className={`${labelClass} font-semibold text-muted-foreground uppercase tracking-wider`}>
+        <span className={`${labelClass} font-overline text-muted-foreground uppercase tracking-wider`}>
           Current version
         </span>
         <div className={`mt-1 rounded bg-destructive/5 border border-destructive/10 ${padClass} text-muted-foreground leading-relaxed min-h-[40px] ${maxH}`}>
@@ -101,7 +101,7 @@ const TableDiff = ({ before, after, labelClass, padClass, maxH }: InnerDiffProps
         </div>
       </div>
       <div>
-        <span className={`${labelClass} font-semibold text-muted-foreground uppercase tracking-wider`}>
+        <span className={`${labelClass} font-overline text-muted-foreground uppercase tracking-wider`}>
           Proposed version
         </span>
         <div className={`mt-1 rounded bg-success/5 border border-success/10 ${padClass} text-foreground leading-relaxed min-h-[40px] ${maxH}`}>
@@ -117,7 +117,7 @@ const TableDiff = ({ before, after, labelClass, padClass, maxH }: InnerDiffProps
 const SideBySideDiff = ({ before, after, labelClass, padClass, maxH }: InnerDiffProps) => (
   <div className="grid grid-cols-2 gap-3">
     <div>
-      <span className={`${labelClass} font-semibold text-muted-foreground uppercase tracking-wider`}>
+      <span className={`${labelClass} font-overline text-muted-foreground uppercase tracking-wider`}>
         Current version
       </span>
       <div className={`mt-1 rounded bg-destructive/5 border border-destructive/10 ${padClass} text-muted-foreground leading-relaxed min-h-[40px] ${maxH}`}>
@@ -125,7 +125,7 @@ const SideBySideDiff = ({ before, after, labelClass, padClass, maxH }: InnerDiff
       </div>
     </div>
     <div>
-      <span className={`${labelClass} font-semibold text-muted-foreground uppercase tracking-wider`}>
+      <span className={`${labelClass} font-overline text-muted-foreground uppercase tracking-wider`}>
         Proposed version
       </span>
       <div className={`mt-1 rounded bg-success/5 border border-success/10 ${padClass} text-foreground leading-relaxed min-h-[40px] ${maxH}`}>

@@ -65,6 +65,12 @@ const Index = () => {
 
         {activeTab === "integrations" && <IntegrationsPanel />}
       </main>
+
+      <footer className="border-t border-border py-4 mt-8">
+        <p className="text-center text-xs text-muted-foreground">
+          Powered by <a href="https://taskbase.com" target="_blank" rel="noopener noreferrer" className="font-subheading text-primary hover:underline">Taskbase</a>
+        </p>
+      </footer>
     </div>
   );
 };

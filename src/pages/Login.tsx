@@ -43,17 +43,17 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-sm flex-1 flex flex-col justify-center">
         <div className="flex items-center justify-center gap-3 mb-8">
           <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
             <BookOpen className="w-5 h-5 text-primary-foreground" />
           </div>
-          <span className="text-lg font-bold text-foreground tracking-tight">Playbook Manager</span>
+          <span className="text-lg text-foreground">Playbook Manager</span>
         </div>
 
         <div className="rounded-lg border border-border bg-card p-5 shadow-card">
-          <h2 className="text-lg font-semibold text-foreground mb-1">
+          <h2 className="text-lg text-foreground mb-1">
             {mode === "login" ? "Sign in" : "Create account"}
           </h2>
           <p className="text-sm text-muted-foreground mb-4">
@@ -63,7 +63,7 @@ export default function Login() {
           {mode === "login" ? (
             <form onSubmit={handleLogin} className="space-y-3">
               <div>
-                <label htmlFor="login-email" className="block text-xs font-medium text-foreground mb-1.5">Email</label>
+                <label htmlFor="login-email" className="block text-xs font-caption text-foreground mb-1.5">Email</label>
                 <input
                   type="email"
                   id="login-email"
@@ -75,7 +75,7 @@ export default function Login() {
                 />
               </div>
               <div>
-                <label htmlFor="login-password" className="block text-xs font-medium text-foreground mb-1.5">Password</label>
+                <label htmlFor="login-password" className="block text-xs font-caption text-foreground mb-1.5">Password</label>
                 <input
                   type="password"
                   id="login-password"
@@ -92,11 +92,11 @@ export default function Login() {
                   Forgot password?
                 </Link>
               </div>
-              {error && <p className="text-xs text-destructive font-medium">{error}</p>}
+              {error && <p className="text-xs text-destructive font-caption">{error}</p>}
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full flex items-center justify-center gap-2 rounded-lg gradient-primary py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50 transition-opacity"
+                className="w-full flex items-center justify-center gap-2 rounded-lg gradient-primary py-2.5 text-sm font-subheading text-primary-foreground disabled:opacity-50 transition-opacity"
               >
                 {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
                 Sign in
@@ -105,7 +105,7 @@ export default function Login() {
           ) : (
             <form onSubmit={handleSignup} className="space-y-3">
               <div>
-                <label htmlFor="signup-name" className="block text-xs font-medium text-foreground mb-1.5">Full name</label>
+                <label htmlFor="signup-name" className="block text-xs font-caption text-foreground mb-1.5">Full name</label>
                 <input
                   type="text"
                   id="signup-name"
@@ -117,7 +117,7 @@ export default function Login() {
                 />
               </div>
               <div>
-                <label htmlFor="signup-email" className="block text-xs font-medium text-foreground mb-1.5">Email</label>
+                <label htmlFor="signup-email" className="block text-xs font-caption text-foreground mb-1.5">Email</label>
                 <input
                   type="email"
                   id="signup-email"
@@ -129,7 +129,7 @@ export default function Login() {
                 />
               </div>
               <div>
-                <label htmlFor="signup-password" className="block text-xs font-medium text-foreground mb-1.5">Password</label>
+                <label htmlFor="signup-password" className="block text-xs font-caption text-foreground mb-1.5">Password</label>
                 <input
                   type="password"
                   id="signup-password"
@@ -152,11 +152,11 @@ export default function Login() {
                   This is an early-stage prototype with limited spots. If no spots are available you'll be placed on a waiting list. Features may change and data may be reset without notice. No warranties are provided. By signing up you agree to be contacted by Taskbase.
                 </span>
               </label>
-              {error && <p className="text-xs text-destructive font-medium">{error}</p>}
+              {error && <p className="text-xs text-destructive font-caption">{error}</p>}
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full flex items-center justify-center gap-2 rounded-lg gradient-primary py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50 transition-opacity"
+                className="w-full flex items-center justify-center gap-2 rounded-lg gradient-primary py-2.5 text-sm font-subheading text-primary-foreground disabled:opacity-50 transition-opacity"
               >
                 {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
                 Create account
@@ -175,6 +175,9 @@ export default function Login() {
           </div>
         </div>
       </div>
+      <p className="py-4 text-xs text-muted-foreground">
+        Powered by <a href="https://taskbase.com" target="_blank" rel="noopener noreferrer" className="font-subheading text-primary hover:underline">Taskbase</a>
+      </p>
     </div>
   );
 }

@@ -36,7 +36,7 @@ export const SkillsFramework = ({ onFillGap, statusFilter }: { onFillGap?: (skil
       <div className="flex items-center justify-between mb-5">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-foreground">Skills Framework</h2>
+            <h2 className="text-lg text-foreground">Skills Framework</h2>
             {isRefetching && <Loader2 className="w-3.5 h-3.5 text-muted-foreground animate-spin" />}
           </div>
           <p className="text-sm text-muted-foreground mt-1">Coverage across sales competencies</p>
@@ -65,7 +65,7 @@ export const SkillsFramework = ({ onFillGap, statusFilter }: { onFillGap?: (skil
               className="rounded-lg border border-border/60 bg-muted/20 p-4"
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-semibold text-foreground">{category.name}</span>
+                <span className="text-sm font-subheading text-foreground">{category.name}</span>
                 <span className="text-xs font-mono text-muted-foreground">{statusFilter ? `${filteredSkills.length} of ${category.skills.length}` : `${pct}%`}</span>
               </div>
               {!statusFilter && (
@@ -93,19 +93,19 @@ export const SkillsFramework = ({ onFillGap, statusFilter }: { onFillGap?: (skil
                     >
                       <div className="flex items-center gap-2">
                         <Icon className={`w-3.5 h-3.5 ${skill.fulfilled ? "text-muted-foreground" : config.color}`} />
-                        <span className={`text-sm font-medium ${skill.fulfilled ? "text-muted-foreground line-through" : "text-foreground"}`}>{skill.name}</span>
+                        <span className={`text-sm font-subheading ${skill.fulfilled ? "text-muted-foreground line-through" : "text-foreground"}`}>{skill.name}</span>
                         {skill.fulfilled && (
                           <span className="text-[10px] text-muted-foreground italic">Dismissed</span>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
                         {skill.lastUpdated && !skill.fulfilled && (
-                          <span className={`text-[10px] font-mono ${outdated ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+                          <span className={`text-[10px] font-mono ${outdated ? "text-destructive font-caption" : "text-muted-foreground"}`}>
                             {skill.lastUpdated}
                           </span>
                         )}
                         {isActionable && !skill.fulfilled && (
-                          <span className="text-[10px] font-semibold text-primary">{outdated && skill.status === "covered" ? "Update →" : "Fill →"}</span>
+                          <span className="text-[10px] font-caption text-primary">{outdated && skill.status === "covered" ? "Update →" : "Fill →"}</span>
                         )}
                       </div>
                     </div>
@@ -123,7 +123,7 @@ export const SkillsFramework = ({ onFillGap, statusFilter }: { onFillGap?: (skil
                               e.stopPropagation();
                               toggleFulfilled.mutate({ skillId: skill.id, fulfilled: !skill.fulfilled });
                             }}
-                            className="text-[11px] font-medium text-foreground hover:text-primary transition-colors text-left"
+                            className="text-[11px] font-subheading text-foreground hover:text-primary transition-colors text-left"
                           >
                             {skill.fulfilled ? "Undo" : "Dismiss"}
                           </button>

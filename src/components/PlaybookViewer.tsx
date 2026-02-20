@@ -449,7 +449,7 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange, initialSectio
           <div className="flex items-center gap-6 flex-wrap">
             <div className="flex items-center gap-3">
               <FileText className="w-4 h-4 text-primary" />
-              <h2 className="text-sm font-semibold text-foreground">Playbook Content</h2>
+              <h2 className="text-sm text-foreground">Playbook Content</h2>
             </div>
             <div className="h-5 w-px bg-border" />
             <div className="flex items-center gap-2">
@@ -460,7 +460,7 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange, initialSectio
                   <button
                     key={key}
                     onClick={() => setStatusFilter(active ? null : key)}
-                    className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                    className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-subheading transition-all ${
                       active
                         ? "bg-primary/10 ring-2 ring-primary/30"
                         : "bg-muted/50 hover:bg-muted/80"
@@ -468,7 +468,7 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange, initialSectio
                   >
                     <Icon className={`w-3.5 h-3.5 ${color}`} />
                     <span className="text-muted-foreground">{label}</span>
-                    <span className={`font-bold font-mono ${color}`}>{count}</span>
+                    <span className={`font-overline font-mono ${color}`}>{count}</span>
                   </button>
                 );
               })}
@@ -531,7 +531,7 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange, initialSectio
         <div className="flex items-center gap-6 flex-wrap">
           <div className="flex items-center gap-3">
             <FileText className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-semibold text-foreground">Playbook Content</h2>
+            <h2 className="text-sm text-foreground">Playbook Content</h2>
             {isRefetching && <Loader2 className="w-3.5 h-3.5 text-muted-foreground animate-spin" />}
           </div>
           <div className="h-5 w-px bg-border" />
@@ -543,7 +543,7 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange, initialSectio
                 <button
                   key={key}
                   onClick={() => setStatusFilter(active ? null : key)}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-subheading transition-all ${
                     active
                       ? "bg-primary/10 ring-2 ring-primary/30"
                       : "bg-muted/50 hover:bg-muted/80"
@@ -551,7 +551,7 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange, initialSectio
                 >
                   <Icon className={`w-3.5 h-3.5 ${color}`} />
                   <span className="text-muted-foreground">{label}</span>
-                  <span className={`font-bold font-mono ${color}`}>{count}</span>
+                  <span className={`font-overline font-mono ${color}`}>{count}</span>
                 </button>
               );
             })}
@@ -565,14 +565,14 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange, initialSectio
                   {filterMode === "category" && `${displaySections.length} related section${displaySections.length !== 1 ? "s" : ""} for`}
                   {filterMode === "unlinked" && "No linked sections for"}
                 </span>
-                <span className="text-[11px] font-semibold text-primary">{skillFilter.skillName}</span>
+                <span className="text-[11px] font-caption text-primary">{skillFilter.skillName}</span>
                 {filterMode === "unlinked" && (
                   <span className="text-[11px] text-muted-foreground">— consider adding a new section</span>
                 )}
               </div>
               <button
                 onClick={() => onSkillFilterChange(null)}
-                className="flex items-center gap-1 rounded-lg bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground hover:bg-muted/80 transition-colors"
+                className="flex items-center gap-1 rounded-lg bg-muted px-2 py-0.5 text-[10px] font-caption text-muted-foreground hover:bg-muted/80 transition-colors"
               >
                 <X className="w-2.5 h-2.5" />
                 Clear
@@ -581,7 +581,7 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange, initialSectio
           )}
           <AnimatePresence mode="wait">
             {savedFlash && (
-              <motion.span key="saved" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1 text-[10px] text-success font-semibold">
+              <motion.span key="saved" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1 text-[10px] text-success font-subheading">
                 <CheckCircle2 className="w-3 h-3" />
                 Saved — staged for review
               </motion.span>
@@ -589,7 +589,7 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange, initialSectio
           </AnimatePresence>
           <button
             onClick={() => setChatPanelOpen((v) => !v)}
-            className="ml-auto flex items-center gap-1.5 rounded-lg bg-muted/50 px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+            className="ml-auto flex items-center gap-1.5 rounded-lg bg-muted/50 px-2.5 py-1.5 text-[11px] font-subheading text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
             title={chatPanelOpen ? "Hide chat panel" : "Show chat panel"}
           >
             {chatPanelOpen ? <PanelRightClose className="w-3.5 h-3.5" /> : <PanelRightOpen className="w-3.5 h-3.5" />}
@@ -629,7 +629,7 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange, initialSectio
           <div className="flex-1 overflow-y-auto p-6">
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-3">
-                <h3 className="text-lg font-bold text-foreground">{current.title.replace(/^\u00A0+/, "")}</h3>
+                <h3 className="text-lg text-foreground">{current.title.replace(/^\u00A0+/, "")}</h3>
                 <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono bg-muted rounded px-2 py-0.5">
                   <Clock className="w-2.5 h-2.5" />
                   {current.lastUpdated}
@@ -637,7 +637,7 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange, initialSectio
                 {!editing ? (
                   <button
                     onClick={startEditing}
-                    className="flex items-center gap-1 rounded-lg bg-secondary px-2.5 py-1 text-[11px] font-semibold text-secondary-foreground hover:bg-secondary/80 transition-colors ml-auto"
+                    className="flex items-center gap-1 rounded-lg bg-secondary px-2.5 py-1 text-[11px] font-subheading text-secondary-foreground hover:bg-secondary/80 transition-colors ml-auto"
                   >
                     <Pencil className="w-3 h-3" />
                     Edit
@@ -646,7 +646,7 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange, initialSectio
                   <div className="flex items-center gap-1.5 ml-auto">
                     <button
                       onClick={cancelEditing}
-                      className="flex items-center gap-1 rounded-lg bg-muted px-2.5 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-muted/80 transition-colors"
+                      className="flex items-center gap-1 rounded-lg bg-muted px-2.5 py-1 text-[11px] font-caption text-muted-foreground hover:bg-muted/80 transition-colors"
                     >
                       <X className="w-3 h-3" />
                       Cancel
@@ -654,7 +654,7 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange, initialSectio
                     <button
                       onClick={saveEdit}
                       disabled={updateSection.isPending}
-                      className="flex items-center gap-1 rounded-lg gradient-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground transition-opacity disabled:opacity-50"
+                      className="flex items-center gap-1 rounded-lg gradient-primary px-2.5 py-1 text-[11px] font-caption text-primary-foreground transition-opacity disabled:opacity-50"
                     >
                       {updateSection.isPending ? (
                         <Loader2 className="w-3 h-3 animate-spin" />
@@ -675,7 +675,7 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange, initialSectio
                     const Icon = cfg.icon;
                     const showToggle = skill.status !== "covered";
                     const badge = (
-                      <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium border ${
+                      <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-subheading border ${
                         skill.fulfilled
                           ? "bg-muted/30 border-border/40 text-muted-foreground"
                           : `${cfg.bg} border-transparent`
@@ -697,7 +697,7 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange, initialSectio
                                 e.stopPropagation();
                                 toggleFulfilled.mutate({ skillId: skill.id, fulfilled: !skill.fulfilled });
                               }}
-                              className="text-[11px] font-medium text-foreground hover:text-primary transition-colors text-left"
+                              className="text-[11px] font-subheading text-foreground hover:text-primary transition-colors text-left"
                             >
                               {skill.fulfilled ? "Undo" : "Dismiss"}
                             </button>
@@ -718,7 +718,7 @@ export const PlaybookViewer = ({ skillFilter, onSkillFilterChange, initialSectio
                           setChatPrefill({ text, key: chatPrefillCounter.current });
                           if (!chatPanelOpen) setChatPanelOpen(true);
                         }}
-                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
+                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-subheading text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
                       >
                         <Sparkles className="w-3 h-3" />
                         Improve with AI

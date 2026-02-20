@@ -21,7 +21,7 @@ const InlineChangesView = ({ before, after }: { before?: string | null; after: s
   if (!before) {
     return (
       <div className="rounded-lg border border-success/20 bg-success/5 p-4 max-h-[60vh] overflow-y-auto">
-        <div className="text-[11px] font-semibold text-success uppercase tracking-wider mb-2">New content</div>
+        <div className="text-[11px] font-overline text-success uppercase tracking-wider mb-2">New content</div>
         <Markdown>{fixGfmTables(after)}</Markdown>
       </div>
     );
@@ -102,16 +102,16 @@ export const StagingPanel = () => {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <ClipboardList className="w-5 h-5 text-primary" />
-          <h2 className="text-lg font-semibold text-foreground">Review & Publish</h2>
+          <h2 className="text-lg text-foreground">Review & Publish</h2>
           {pending.length > 0 && (
-            <span className="rounded-full bg-warning/15 text-warning text-xs font-semibold px-2.5 py-0.5">
+            <span className="rounded-full bg-warning/15 text-warning text-xs font-caption px-2.5 py-0.5">
               {pending.length} to review
             </span>
           )}
           {rejected.length > 0 && (
             <button
               onClick={() => setShowRejected((v) => !v)}
-              className="flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-subheading text-muted-foreground hover:text-foreground transition-colors"
             >
               {showRejected ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
               {rejected.length} dismissed
@@ -123,7 +123,7 @@ export const StagingPanel = () => {
             <button
               disabled={!hasApproved || publish.isPending}
               onClick={handlePublish}
-              className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-30 transition-opacity"
+              className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-subheading text-primary-foreground disabled:opacity-30 transition-opacity"
             >
               {publish.isPending ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -136,7 +136,7 @@ export const StagingPanel = () => {
           <button
             onClick={handleNudge}
             disabled={notify.isPending}
-            className="flex items-center gap-1.5 rounded-lg bg-secondary px-4 py-2 text-sm font-semibold text-secondary-foreground disabled:opacity-30"
+            className="flex items-center gap-1.5 rounded-lg bg-secondary px-4 py-2 text-sm font-subheading text-secondary-foreground disabled:opacity-30"
           >
             {notify.isPending ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -164,8 +164,8 @@ export const StagingPanel = () => {
             {/* Header: section name + status */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2.5">
-                <span className="text-sm font-semibold text-foreground">{edit.section}</span>
-                <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                <span className="text-sm font-subheading text-foreground">{edit.section}</span>
+                <span className={`rounded-full px-2.5 py-0.5 text-xs font-caption ${
                   edit.status === "approved"
                     ? "bg-success/15 text-success"
                     : edit.status === "rejected"
@@ -179,7 +179,7 @@ export const StagingPanel = () => {
                     : "Needs review"}
                 </span>
                 {edit.source && (
-                  <div className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                  <div className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-subheading ${
                     edit.source === "chat"
                       ? "bg-primary/10 text-primary"
                       : "bg-secondary/50 text-secondary-foreground"
@@ -204,7 +204,7 @@ export const StagingPanel = () => {
                 <button
                   onClick={() => unapproveEdit.mutate(edit.id)}
                   disabled={unapproveEdit.isPending}
-                  className="flex items-center gap-1.5 rounded-lg bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  className="flex items-center gap-1.5 rounded-lg bg-muted px-3 py-1.5 text-xs font-subheading text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <RotateCcw className="w-3 h-3" />
                   Undo
@@ -214,7 +214,7 @@ export const StagingPanel = () => {
                 <button
                   onClick={() => unrejectEdit.mutate(edit.id)}
                   disabled={unrejectEdit.isPending}
-                  className="flex items-center gap-1.5 rounded-lg bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  className="flex items-center gap-1.5 rounded-lg bg-muted px-3 py-1.5 text-xs font-subheading text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <RotateCcw className="w-3 h-3" />
                   Undo
@@ -227,7 +227,7 @@ export const StagingPanel = () => {
               <div className="space-y-3">
                 {edit.before && (
                   <div className="rounded-lg border border-border bg-muted/50 p-3">
-                    <div className="text-xs font-semibold text-muted-foreground mb-1.5">Current version (read-only)</div>
+                    <div className="text-xs font-caption text-muted-foreground mb-1.5">Current version (read-only)</div>
                     <Markdown>{fixGfmTables(edit.before)}</Markdown>
                   </div>
                 )}
@@ -235,7 +235,7 @@ export const StagingPanel = () => {
                 <div className="flex gap-2 justify-end">
                   <button
                     onClick={() => setEditingId(null)}
-                    className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    className="rounded-lg px-4 py-2 text-sm font-subheading text-muted-foreground hover:text-foreground transition-colors"
                   >
                     Cancel
                   </button>
@@ -247,7 +247,7 @@ export const StagingPanel = () => {
                         { onSuccess: () => setEditingId(null) },
                       );
                     }}
-                    className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-30 transition-opacity"
+                    className="rounded-lg bg-primary px-4 py-2 text-sm font-subheading text-primary-foreground disabled:opacity-30 transition-opacity"
                   >
                     {updateEditText.isPending ? "Saving..." : "Save"}
                   </button>
@@ -266,7 +266,7 @@ export const StagingPanel = () => {
                           setEditingId(edit.id);
                           setEditDraft(edit.after);
                         }}
-                        className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                        className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-subheading text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                       >
                         <Pencil className="w-3 h-3" />
                         Edit
@@ -274,7 +274,7 @@ export const StagingPanel = () => {
                       <button
                         onClick={() => rejectEdit.mutate(edit.id)}
                         disabled={rejectEdit.isPending}
-                        className="flex items-center gap-1.5 rounded-lg border border-destructive/30 px-3 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors"
+                        className="flex items-center gap-1.5 rounded-lg border border-destructive/30 px-3 py-1.5 text-xs font-subheading text-destructive hover:bg-destructive/10 transition-colors"
                       >
                         <X className="w-3.5 h-3.5" />
                         Dismiss
@@ -282,7 +282,7 @@ export const StagingPanel = () => {
                       <button
                         onClick={() => approveEdit.mutate(edit.id)}
                         disabled={approveEdit.isPending}
-                        className="flex items-center gap-1.5 rounded-lg bg-success/15 px-4 py-1.5 text-xs font-semibold text-success hover:bg-success/25 transition-colors"
+                        className="flex items-center gap-1.5 rounded-lg bg-success/15 px-4 py-1.5 text-xs font-overline text-success hover:bg-success/25 transition-colors"
                       >
                         <Check className="w-3.5 h-3.5" />
                         Accept
